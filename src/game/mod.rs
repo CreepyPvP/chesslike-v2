@@ -55,7 +55,7 @@ fn create_map(
                 let tile = commands
                     .spawn(SpriteBundle {
                         texture: game_assets.tiles[id - 1].clone(),
-                        transform: Transform::from_xyz(draw_x, -draw_y + layer_id * tile_h, x + y * l_width + (i as f32)),
+                        transform: Transform::from_xyz(draw_x, -draw_y + layer_id * tile_h, x + y * l_width + layer_id),
                         ..default()
                     })
                     .id();
