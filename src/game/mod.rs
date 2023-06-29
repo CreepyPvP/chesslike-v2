@@ -35,7 +35,11 @@ fn create_map(
     let (tile_w, tile_h) = (tilemap.tilewidth as f32, tilemap.tileheight as f32);
 
     let mut tiles: Vec<Entity> = vec![];
-    for layer in &tilemap.layers {
+    for (i, layer) in tilemap.layers.iter().enumerate() {
+        let l_width = layer.width as f32;
+        let l_height = layer.height as f32;
+        let layer_id = i as f32;
+
         for x in 0..layer.width {
             for y in 0..layer.height {
                 let id = layer.data[(x + y * layer.width) as usize] as usize;
@@ -43,15 +47,15 @@ fn create_map(
                     continue;
                 }
 
-                let x = x as f32;
-                let y = y as f32;
+                let x = x as f32 + layer_id;
+                let y = y as f32 + layer_id;
 
                 let draw_x = (x * tile_w - y * tile_w) / 2.;
                 let draw_y = (x * tile_h + y * tile_h) / 2.;
                 let tile = commands
                     .spawn(SpriteBundle {
                         texture: game_assets.tiles[id - 1].clone(),
-                        transform: Transform::from_xyz(draw_x as f32 , draw_y as f32, 0.),
+                        transform: Transform::from_xyz(draw_x, -draw_y + layer_id * tile_h, x + y * l_width + (i as f32)),
                         ..default()
                     })
                     .id();
