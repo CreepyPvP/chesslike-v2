@@ -18,8 +18,7 @@ impl Plugin for GamePlugin {
             create_map
                 .in_schedule(OnEnter(AppState::Game))
                 .in_set(GameSystemSets::Start),
-            destroy_map
-                .in_schedule(OnExit(AppState::Game))
+            destroy_map.in_schedule(OnExit(AppState::Game)),
         ));
     }
 }
@@ -35,6 +34,8 @@ fn create_map(mut commands: Commands, assests: Res<AssetServer>) {
     //     },
     //     Map,
     // ));
+
+    println!("game state");
 }
 
 fn destroy_map(mut command: Commands, query: Query<Entity, With<Map>>) {

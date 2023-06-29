@@ -1,16 +1,20 @@
 use bevy::prelude::*;
 
-use self::{types::*, tiled_loader::TiledMapLoader};
+use self::{
+    tiled_loader::{TiledMapLoader, TiledSetLoader},
+    types::*,
+};
 
-pub mod types;
 mod tiled_loader;
+pub mod types;
 
 pub struct AssetsPlugin;
 
 impl Plugin for AssetsPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_asset::<TiledMap>()
-            .init_asset_loader::<TiledMapLoader>();
+        app.add_asset::<TiledMap>()
+            .init_asset_loader::<TiledMapLoader>()
+            .add_asset::<TiledSet>()
+            .init_asset_loader::<TiledSetLoader>();
     }
 }
