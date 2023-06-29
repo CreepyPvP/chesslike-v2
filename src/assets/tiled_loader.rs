@@ -1,7 +1,4 @@
-use bevy::{
-    asset::{AssetLoader, LoadedAsset},
-    prelude::Image,
-};
+use bevy::asset::{AssetLoader, LoadedAsset};
 
 use super::types::{TiledMap, TiledSet};
 
@@ -37,7 +34,10 @@ impl AssetLoader for TiledSetLoader {
     ) -> bevy::utils::BoxedFuture<'a, Result<(), bevy::asset::Error>> {
         Box::pin(async move {
             let set: TiledSet = serde_json::from_slice(bytes)?;
-            load_context.set_default_asset(LoadedAsset::new(set));
+            let asset = LoadedAsset::new(set.clone());
+            let asset =
+                asset.with_dependencies(set.tiles.iter().map(|tile| tile.path().into()).collect());
+            load_context.set_default_asset(asset);
             Ok(())
         })
     }

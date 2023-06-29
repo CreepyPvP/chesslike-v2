@@ -22,7 +22,7 @@ pub struct TiledMap {
     pub tileheight: u32,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct TiledTile {
     pub id: u32,
     pub image: String,
@@ -34,7 +34,7 @@ impl TiledTile {
     }
 }
 
-#[derive(Deserialize, Debug, TypeUuid)]
+#[derive(Deserialize, Debug, Clone, TypeUuid)]
 #[uuid = "78c1a660-ed27-4d62-ab29-ce24d90279a0"]
 pub struct TiledSet {
     pub name: String,

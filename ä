@@ -1,4 +1,4 @@
-use crate::{assets::types::{TiledMap, TiledSet}, types::GameAssets, AppState};
+use crate::{AppState, types::GameAssets, assets::types::TiledMap};
 use bevy::prelude::*;
 
 #[derive(SystemSet, Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -26,46 +26,24 @@ impl Plugin for GamePlugin {
 #[derive(Component)]
 struct Map;
 
-fn create_map(
-    mut commands: Commands,
-    game_assets: Res<GameAssets>,
-    tilemaps: Res<Assets<TiledMap>>,
-) {
-    let tilemap = tilemaps.get(&game_assets.map).unwrap();
-    let (tile_w, tile_h) = (tilemap.tilewidth as f32, tilemap.tileheight as f32);
-
-    let mut tiles: Vec<Entity> = vec![];
-    for layer in &tilemap.layers {
+fn create_map(mut commands: Commands, game_assets: Res<GameAssets>, tilemaps: Res<Assets<TiledMap>>) {
+    let tiles: Vec<Entity> = vec!();
+    for layer in &tilemaps.get(&game_assets.map).unwrap().layers {
         for x in 0..layer.width {
             for y in 0..layer.height {
                 let id = layer.data[(x + y * layer.width) as usize] as usize;
                 if id == 0 {
                     continue;
                 }
-
-                let x = x as f32;
-                let y = y as f32;
-
-                let draw_x = (x * tile_w - y * tile_w) / 2.;
-                let draw_y = (x * tile_h + y * tile_h) / 2.;
-                let tile = commands
-                    .spawn(SpriteBundle {
+                let tile = commands.spawn((
+                    SpriteBundle {
                         texture: game_assets.tiles[id - 1].clone(),
-                        transform: Transform::from_xyz(draw_x as f32 , draw_y as f32, 0.),
                         ..default()
-                    })
-                    .id();
-                tiles.push(tile);
+                    }
+                )).id();
+                map.add_child(tile);
             }
         }
-    }
-
-    let mut map = commands.spawn((Map, SpatialBundle {
-        transform: Transform::from_scale(Vec3::new(0.4, 0.4, 1.)),
-        ..default()
-    }));
-    for tile in tiles {
-        map.add_child(tile);
     }
 }
 

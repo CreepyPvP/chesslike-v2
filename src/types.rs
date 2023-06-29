@@ -1,4 +1,4 @@
-use bevy::prelude::{Handle, HandleUntyped, Image, Resource};
+use bevy::prelude::{Handle, Image, Resource};
 
 use crate::assets::types::{TiledMap, TiledSet};
 
@@ -12,7 +12,5 @@ pub struct GameConfig {
 pub struct GameAssets {
     pub map: Handle<TiledMap>,
     pub tileset: Handle<TiledSet>,
-    pub tiles: Option<Vec<Handle<Image>>>,
-
-    pub assets: Option<Vec<HandleUntyped>>,
+    pub tiles: Vec<Handle<Image>>,
 }

@@ -1,7 +1,7 @@
-use bevy::{asset::Asset, prelude::*};
+use bevy::prelude::*;
 
 use crate::{
-    assets::types::{TiledMap, TiledSet, TiledTile},
+    assets::types::{TiledMap, TiledSet},
     types::{GameAssets, GameConfig},
     AppState,
 };
@@ -26,7 +26,7 @@ impl Plugin for LoadingPlugin {
 
 fn start_loading(mut command: Commands, assets: Res<AssetServer>, game_config: Res<GameConfig>) {
     let tileset_h: Handle<TiledSet> = assets.load(&game_config.tileset);
-    let map_h: Handle<TiledMap> = assets.load(&game_config.tileset);
+    let map_h: Handle<TiledMap> = assets.load(&game_config.map);
 
     let resource = LoadingResource {
         all: vec![map_h.clone_untyped(), tileset_h.clone_untyped()],
@@ -43,10 +43,11 @@ fn load(
     tilesets: Res<Assets<TiledSet>>,
     mut loading: ResMut<LoadingResource>,
     mut next_state: ResMut<NextState<AppState>>,
+    mut command: Commands,
 ) {
     let tileset = match tilesets.get(&loading.tileset) {
         Some(tileset) => tileset,
-        None => return,
+        _ => return,
     };
 
     if loading.tiles.is_none() {
@@ -70,5 +71,11 @@ fn load(
         }
     }
 
+    command.insert_resource(GameAssets {
+        map: loading.map.clone(),
+        tileset: loading.tileset.clone(),
+        tiles: loading.tiles.clone().unwrap(),
+    });
+    command.remove_resource::<LoadingResource>();
     next_state.set(AppState::Game);
 }
