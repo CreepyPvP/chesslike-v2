@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 
 use crate::{
     assets::types::{TiledMap, TiledSet},
-    types::{GameAssets, GameConfig},
+    game_config::{GameAssets, GameConfig},
     AppState,
 };
 
@@ -10,6 +12,7 @@ use crate::{
 struct LoadingResource {
     map: Handle<TiledMap>,
     tileset: Handle<TiledSet>,
+    units: HashMap<String, Handle<Image>>,
     tiles: Option<Vec<Handle<Image>>>,
 
     all: Vec<HandleUntyped>,
@@ -19,7 +22,9 @@ pub struct LoadingPlugin;
 
 impl Plugin for LoadingPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(start_loading.in_schedule(OnEnter(AppState::Loading)));
+        app.add_system(
+            start_loading.in_schedule(OnEnter(AppState::Loading)),
+        );
         app.add_system(load.in_set(OnUpdate(AppState::Loading)));
     }
 }
@@ -28,11 +33,17 @@ fn start_loading(mut command: Commands, assets: Res<AssetServer>, game_config: R
     let tileset_h: Handle<TiledSet> = assets.load(&game_config.tileset);
     let map_h: Handle<TiledMap> = assets.load(&game_config.map);
 
+    // units
+    let police_unit = assets.load("vehicles/PNG/Police/police_NE.png");
+
     let resource = LoadingResource {
-        all: vec![map_h.clone_untyped(), tileset_h.clone_untyped()],
+        all: vec![map_h.clone_untyped(), tileset_h.clone_untyped(), police_unit.clone_untyped()],
         map: map_h,
         tileset: tileset_h,
         tiles: None,
+        units: HashMap::from([
+            ("police".to_string(), police_unit.clone())
+        ]),
     };
 
     command.insert_resource(resource);
@@ -75,6 +86,7 @@ fn load(
         map: loading.map.clone(),
         tileset: loading.tileset.clone(),
         tiles: loading.tiles.clone().unwrap(),
+        units: loading.units.clone(),
     });
     command.remove_resource::<LoadingResource>();
     next_state.set(AppState::Game);

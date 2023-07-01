@@ -3,13 +3,13 @@ use bevy::prelude::*;
 use game::GamePlugin;
 use loading::LoadingPlugin;
 use main_menu::MainMenuPlugin;
-use types::GameConfig;
+use game_config::GameConfig;
 
 mod assets;
 mod game;
 mod loading;
 mod main_menu;
-mod types;
+mod game_config;
 
 #[derive(Debug, Default, Clone, Eq, States, PartialEq, Hash)]
 pub enum AppState {

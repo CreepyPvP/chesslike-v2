@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use self::{map::MapPlugin, unit::UnitPlugin};
 
+mod isometric;
 mod map;
 mod unit;
 
