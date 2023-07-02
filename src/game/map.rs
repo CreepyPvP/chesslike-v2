@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-use crate::{assets::types::TiledMap, game_config::GameAssets, AppState};
+use crate::{assets::types::TiledMap, game_config::GameAssets, AppState, util::collisions::Triangle};
 
-use super::isometric::iso_transform;
+use super::{isometric::iso_transform, picking::Pickable};
 
 pub struct MapPlugin;
 
@@ -26,6 +26,15 @@ pub fn create_map(
     let tilemap = tilemaps.get(&game_assets.map).unwrap();
     let (tile_w, tile_h) = (tilemap.tilewidth as f32, tilemap.tileheight as f32);
 
+    let pickable = Pickable {
+        triangles: vec!(
+            Triangle::new(Vec2::new(116., 0.), Vec2::new(-116., 0.), Vec2::new(0., 45.)),
+            Triangle::new(Vec2::new(116., 0.), Vec2::new(-116., 0.), Vec2::new(-116., -116.)),
+            Triangle::new(Vec2::new(-116., -116.), Vec2::new(116., -116.), Vec2::new(116., 0.)),
+            Triangle::new(Vec2::new(116., -116.), Vec2::new(-116., -116.), Vec2::new(0., -170.)),
+        )
+    };
+
     let mut tiles: Vec<Entity> = vec![];
     for (i, layer) in tilemap.layers.iter().enumerate() {
         let layer_id = i as f32;
@@ -38,13 +47,16 @@ pub fn create_map(
                 }
 
                 let (x, y) = correct_editor_transform(editor_x, editor_y, layer_id);
-                
+
                 let tile = commands
-                    .spawn(SpriteBundle {
-                        texture: game_assets.tiles[id - 1].clone(),
-                        transform: iso_transform(x, y, layer_id, tile_w, tile_h),
-                        ..default()
-                    })
+                    .spawn((
+                        SpriteBundle {
+                            texture: game_assets.tiles[id - 1].clone(),
+                            transform: iso_transform(x, y, layer_id, tile_w, tile_h),
+                            ..default()
+                        },
+                        pickable.clone()
+                    ))
                     .id();
                 tiles.push(tile);
             }
@@ -64,7 +76,10 @@ pub fn create_map(
 }
 
 fn correct_editor_transform(editor_x: u32, editor_y: u32, layer_id: f32) -> (f32, f32) {
-    (editor_x as f32 - 1.0 + layer_id, editor_y as f32 - 1.0 + layer_id)
+    (
+        editor_x as f32 - 1.0 + layer_id,
+        editor_y as f32 - 1.0 + layer_id,
+    )
 }
 
 pub fn destroy_map(mut command: Commands, query: Query<Entity, With<Map>>) {

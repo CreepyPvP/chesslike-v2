@@ -1,9 +1,8 @@
 use bevy::prelude::*;
 
-use crate::{AppState, assets::types::TiledMap, game_config::GameAssets};
+use crate::{assets::types::TiledMap, game_config::GameAssets, AppState};
 
 use super::isometric::iso_transform;
-
 
 pub struct UnitPlugin;
 
@@ -14,11 +13,13 @@ impl Plugin for UnitPlugin {
 }
 
 #[derive(Component)]
-pub struct Unit {
+pub struct Unit {}
 
-}
-
-fn create_units(mut commands: Commands, tilemaps: Res<Assets<TiledMap>>, game_assets: Res<GameAssets>) {
+fn create_units(
+    mut commands: Commands,
+    tilemaps: Res<Assets<TiledMap>>,
+    game_assets: Res<GameAssets>,
+) {
     let tilemap = tilemaps.get(&game_assets.map).unwrap();
     let (tile_w, tile_h) = (tilemap.tilewidth as f32, tilemap.tileheight as f32);
 
@@ -31,7 +32,7 @@ fn create_units(mut commands: Commands, tilemaps: Res<Assets<TiledMap>>, game_as
         // },
         SpriteBundle {
             texture: game_assets.units.get("police").unwrap().clone(),
-            transform: iso_transform(3., 4., 0., tile_w, tile_h).with_scale(Vec3::new(2.,2.,2.)),
+            transform: iso_transform(3., 4., 0., tile_w, tile_h).with_scale(Vec3::new(2., 2., 2.)),
             ..default()
         },
     ));

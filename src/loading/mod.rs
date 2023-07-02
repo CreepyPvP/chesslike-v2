@@ -22,9 +22,7 @@ pub struct LoadingPlugin;
 
 impl Plugin for LoadingPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(
-            start_loading.in_schedule(OnEnter(AppState::Loading)),
-        );
+        app.add_system(start_loading.in_schedule(OnEnter(AppState::Loading)));
         app.add_system(load.in_set(OnUpdate(AppState::Loading)));
     }
 }
@@ -37,13 +35,15 @@ fn start_loading(mut command: Commands, assets: Res<AssetServer>, game_config: R
     let police_unit = assets.load("vehicles/PNG/Police/police_NE.png");
 
     let resource = LoadingResource {
-        all: vec![map_h.clone_untyped(), tileset_h.clone_untyped(), police_unit.clone_untyped()],
+        all: vec![
+            map_h.clone_untyped(),
+            tileset_h.clone_untyped(),
+            police_unit.clone_untyped(),
+        ],
         map: map_h,
         tileset: tileset_h,
         tiles: None,
-        units: HashMap::from([
-            ("police".to_string(), police_unit.clone())
-        ]),
+        units: HashMap::from([("police".to_string(), police_unit.clone())]),
     };
 
     command.insert_resource(resource);

@@ -1,15 +1,16 @@
 use assets::AssetsPlugin;
 use bevy::prelude::*;
-use game::GamePlugin;
+use game::{GamePlugin, picking::PickCamera};
+use game_config::GameConfig;
 use loading::LoadingPlugin;
 use main_menu::MainMenuPlugin;
-use game_config::GameConfig;
 
 mod assets;
 mod game;
+mod game_config;
 mod loading;
 mod main_menu;
-mod game_config;
+mod util;
 
 #[derive(Debug, Default, Clone, Eq, States, PartialEq, Hash)]
 pub enum AppState {
@@ -36,8 +37,11 @@ fn main() {
 }
 
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn(Camera2dBundle {
-        transform: Transform::from_xyz(0., 0., 1000.),
-        ..Default::default()
-    });
+    commands.spawn((
+        Camera2dBundle {
+            transform: Transform::from_xyz(0., 0., 1000.),
+            ..Default::default()
+        },
+        PickCamera::default(),
+    ));
 }

@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 
-use self::{map::MapPlugin, unit::UnitPlugin};
+use self::{map::MapPlugin, picking::PickingPlugin, unit::UnitPlugin};
 
 mod isometric;
 mod map;
+pub mod picking;
 mod unit;
 
 #[derive(SystemSet, Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -21,5 +22,6 @@ impl Plugin for GamePlugin {
 
         app.add_plugin(MapPlugin);
         app.add_plugin(UnitPlugin);
+        app.add_plugin(PickingPlugin);
     }
 }
