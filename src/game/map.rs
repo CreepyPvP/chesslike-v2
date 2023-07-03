@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{assets::types::TiledMap, game_config::GameAssets, AppState, util::collisions::Triangle};
 
-use super::{isometric::iso_transform, picking::Pickable};
+use super::{isometric::iso_transform, picking::Pickable, hoverable::Hoverable};
 
 pub struct MapPlugin;
 
@@ -55,7 +55,8 @@ pub fn create_map(
                             transform: iso_transform(x, y, layer_id, tile_w, tile_h),
                             ..default()
                         },
-                        pickable.clone()
+                        pickable.clone(),
+                        Hoverable,
                     ))
                     .id();
                 tiles.push(tile);

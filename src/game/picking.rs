@@ -1,7 +1,7 @@
 use bevy::{
     prelude::{
         Camera, Component, GlobalTransform, IntoSystemConfig, Plugin, Query,
-        With, Vec2, Entity, Commands,
+        With, Vec2, Entity, Commands, Resource, ResMut,
     },
     render::camera::RenderTarget,
     window::{PrimaryWindow, Window},
@@ -11,6 +11,8 @@ use crate::util::collisions::Triangle;
 
 use super::GameSystemSets;
 
+// Components
+
 #[derive(Component, Clone)]
 pub struct Pickable {
     pub triangles: Vec<Triangle>
@@ -19,10 +21,20 @@ pub struct Pickable {
 #[derive(Component, Default)]
 pub struct PickCamera;
 
+// Resources
+
+#[derive(Resource, Default)]
+pub struct PickState {
+    pub selected: Option<Entity>
+}
+
+// Plugin
+
 pub struct PickingPlugin;
 
 impl Plugin for PickingPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
+        app.insert_resource(PickState::default());
         app.add_system(pick_input.in_set(GameSystemSets::Input));
     }
 }
@@ -31,7 +43,7 @@ fn pick_input(
     camera: Query<(&Camera, &GlobalTransform)>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
     pickables: Query<(&Pickable, &GlobalTransform, Entity)>,
-    mut commands: Commands,
+    mut pick_state: ResMut<PickState>,
 ) {
     let (camera, camera_transform) = camera.single();
     // fuck off bevy docs
@@ -44,9 +56,7 @@ fn pick_input(
 
     if let Some(cursor_pos) = window.cursor_position() {
         if let Some(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) {
-            if let Some(entity) = pick_nearst(&pickables, &world_pos) {
-                commands.get_entity(entity).unwrap().despawn();
-            }
+            pick_state.selected = pick_nearst(&pickables, &world_pos);
         }
     }
 }
