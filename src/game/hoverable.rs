@@ -18,7 +18,7 @@ fn update_tint(pick_state: Res<PickState>, mut hoverables: Query<(&mut Sprite, E
         let mut color = Color::WHITE;
         if let Some(selected) = pick_state.selected { 
             if selected == entity {
-                color = Color::GREEN;
+                color = Color::rgb(1.2, 1.2, 1.2);
             }
         } 
 
