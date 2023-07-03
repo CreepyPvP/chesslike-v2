@@ -70,7 +70,7 @@ pub fn create_map(
                     .spawn((
                         SpriteBundle {
                             texture: game_assets.tiles[id - 1].clone(),
-                            transform: iso_transform(x, y, layer_id, tile_w, tile_h),
+                            transform: iso_transform(x, y, layer_id, tile_w, tile_h, false),
                             ..default()
                         },
                         pickable.clone(),

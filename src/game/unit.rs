@@ -29,7 +29,7 @@ fn create_units(
     commands.spawn((
         SpriteBundle {
             texture: game_assets.units.get("ogre").unwrap().clone(),
-            transform: iso_transform(3., 4., 0., tile_w, tile_h).with_scale(Vec3::new(0.5, 0.5, 0.5)),
+            transform: iso_transform(1., 1., 1., tile_w, tile_h, true).with_scale(Vec3::new(0.5, 0.5, 0.5)),
             ..default()
         },
         Animatable::from_anim(ogre_walk, true),
