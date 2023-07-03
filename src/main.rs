@@ -1,6 +1,6 @@
 use assets::AssetsPlugin;
 use bevy::prelude::*;
-use game::{GamePlugin, picking::PickCamera};
+use game::{picking::PickCamera, GamePlugin};
 use game_config::GameConfig;
 use loading::LoadingPlugin;
 use main_menu::MainMenuPlugin;

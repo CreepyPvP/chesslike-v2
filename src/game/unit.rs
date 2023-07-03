@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{assets::types::TiledMap, game_config::GameAssets, AppState};
 
-use super::isometric::iso_transform;
+use super::{isometric::iso_transform, animation::{Animation, Animatable}};
 
 pub struct UnitPlugin;
 
@@ -23,17 +23,15 @@ fn create_units(
     let tilemap = tilemaps.get(&game_assets.map).unwrap();
     let (tile_w, tile_h) = (tilemap.tilewidth as f32, tilemap.tileheight as f32);
 
+    // this is incredibly ugly...
+    let ogre_walk = Animation::new(0.4, 192, 192, 64, 64, vec!((0, 5), (1, 5), (2, 5), (3, 5)));
+
     commands.spawn((
-        // Unit {
-        //     top_right: assets.load("vehicles/PNG/Police/police_NE.png"),
-        //     top_left: assets.load("vehicles/PNG/Police/police_NW.png"),
-        //     bot_right: assets.load("vehicles/PNG/Police/police_SE.png"),
-        //     bot_left: assets.load("vehicles/PNG/Police/police_SW.png"),
-        // },
         SpriteBundle {
-            texture: game_assets.units.get("police").unwrap().clone(),
-            transform: iso_transform(3., 4., 0., tile_w, tile_h).with_scale(Vec3::new(2., 2., 2.)),
+            texture: game_assets.units.get("ogre").unwrap().clone(),
+            transform: iso_transform(3., 4., 0., tile_w, tile_h).with_scale(Vec3::new(0.5, 0.5, 0.5)),
             ..default()
         },
+        Animatable::from_anim(ogre_walk, true),
     ));
 }

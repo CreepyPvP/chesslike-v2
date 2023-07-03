@@ -1,7 +1,7 @@
 use bevy::{
     prelude::{
-        Camera, Component, GlobalTransform, IntoSystemConfig, Plugin, Query,
-        With, Vec2, Entity, Commands, Resource, ResMut,
+        Camera, Commands, Component, Entity, GlobalTransform, IntoSystemConfig, Plugin, Query,
+        ResMut, Resource, Vec2, With,
     },
     render::camera::RenderTarget,
     window::{PrimaryWindow, Window},
@@ -15,7 +15,7 @@ use super::GameSystemSets;
 
 #[derive(Component, Clone)]
 pub struct Pickable {
-    pub triangles: Vec<Triangle>
+    pub triangles: Vec<Triangle>,
 }
 
 #[derive(Component, Default)]
@@ -25,7 +25,7 @@ pub struct PickCamera;
 
 #[derive(Resource, Default)]
 pub struct PickState {
-    pub selected: Option<Entity>
+    pub selected: Option<Entity>,
 }
 
 // Plugin
@@ -61,12 +61,18 @@ fn pick_input(
     }
 }
 
-fn pick_nearst(pickables: &Query<(&Pickable, &GlobalTransform, Entity)>, world_pos: &Vec2) -> Option<Entity> {
+fn pick_nearst(
+    pickables: &Query<(&Pickable, &GlobalTransform, Entity)>,
+    world_pos: &Vec2,
+) -> Option<Entity> {
     let mut nearest: Option<Entity> = None;
     let mut distance = -1.;
     for (pickable, transform, entity) in &(*pickables) {
         let obj_translation = transform.translation();
-        let corrected_pos = Vec2::new(world_pos.x - obj_translation.x, world_pos.y - obj_translation.y);
+        let corrected_pos = Vec2::new(
+            world_pos.x - obj_translation.x,
+            world_pos.y - obj_translation.y,
+        );
 
         if distance >= 0. && obj_translation.z < distance {
             continue;

@@ -32,18 +32,18 @@ fn start_loading(mut command: Commands, assets: Res<AssetServer>, game_config: R
     let map_h: Handle<TiledMap> = assets.load(&game_config.map);
 
     // units
-    let police_unit = assets.load("vehicles/PNG/Police/police_NE.png");
+    let ogre_unit = assets.load("units/ogre.png");
 
     let resource = LoadingResource {
         all: vec![
             map_h.clone_untyped(),
             tileset_h.clone_untyped(),
-            police_unit.clone_untyped(),
+            ogre_unit.clone_untyped(),
         ],
         map: map_h,
         tileset: tileset_h,
         tiles: None,
-        units: HashMap::from([("police".to_string(), police_unit.clone())]),
+        units: HashMap::from([("ogre".to_string(), ogre_unit.clone())]),
     };
 
     command.insert_resource(resource);

@@ -1,8 +1,10 @@
 use bevy::prelude::*;
 
-use crate::{assets::types::TiledMap, game_config::GameAssets, AppState, util::collisions::Triangle};
+use crate::{
+    assets::types::TiledMap, game_config::GameAssets, util::collisions::Triangle, AppState,
+};
 
-use super::{isometric::iso_transform, picking::Pickable, hoverable::Hoverable};
+use super::{hoverable::Hoverable, isometric::iso_transform, picking::Pickable};
 
 pub struct MapPlugin;
 
@@ -27,12 +29,28 @@ pub fn create_map(
     let (tile_w, tile_h) = (tilemap.tilewidth as f32, tilemap.tileheight as f32);
 
     let pickable = Pickable {
-        triangles: vec!(
-            Triangle::new(Vec2::new(116., 0.), Vec2::new(-116., 0.), Vec2::new(0., 45.)),
-            Triangle::new(Vec2::new(116., 0.), Vec2::new(-116., 0.), Vec2::new(-116., -116.)),
-            Triangle::new(Vec2::new(-116., -116.), Vec2::new(116., -116.), Vec2::new(116., 0.)),
-            Triangle::new(Vec2::new(116., -116.), Vec2::new(-116., -116.), Vec2::new(0., -170.)),
-        )
+        triangles: vec![
+            Triangle::new(
+                Vec2::new(116., 0.),
+                Vec2::new(-116., 0.),
+                Vec2::new(0., 45.),
+            ),
+            Triangle::new(
+                Vec2::new(116., 0.),
+                Vec2::new(-116., 0.),
+                Vec2::new(-116., -116.),
+            ),
+            Triangle::new(
+                Vec2::new(-116., -116.),
+                Vec2::new(116., -116.),
+                Vec2::new(116., 0.),
+            ),
+            Triangle::new(
+                Vec2::new(116., -116.),
+                Vec2::new(-116., -116.),
+                Vec2::new(0., -170.),
+            ),
+        ],
     };
 
     let mut tiles: Vec<Entity> = vec![];
