@@ -1,7 +1,7 @@
 use bevy::{
     prelude::{
         Camera, Component, GlobalTransform, IntoSystemConfig, Plugin, Query,
-        With, Vec2, Transform, Entity, Commands,
+        With, Vec2, Entity, Commands,
     },
     render::camera::RenderTarget,
     window::{PrimaryWindow, Window},
@@ -52,15 +52,22 @@ fn pick_input(
 }
 
 fn pick_nearst(pickables: &Query<(&Pickable, &GlobalTransform, Entity)>, world_pos: &Vec2) -> Option<Entity> {
+    let mut nearest: Option<Entity> = None;
+    let mut distance = -1.;
     for (pickable, transform, entity) in &(*pickables) {
         let obj_translation = transform.translation();
         let corrected_pos = Vec2::new(world_pos.x - obj_translation.x, world_pos.y - obj_translation.y);
+
+        if distance >= 0. && obj_translation.z < distance {
+            continue;
+        }
+
         for triangle in &pickable.triangles {
             if triangle.contains(&corrected_pos) {
-                return Some(entity);
+                nearest = Some(entity);
+                distance = obj_translation.z;
             }
         }
     }
-
-    None
+    nearest
 }
