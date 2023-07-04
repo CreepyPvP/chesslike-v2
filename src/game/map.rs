@@ -139,7 +139,7 @@ fn update_tile_selection(
     pick_state: Res<PickState>,
     mouse: Res<Input<MouseButton>>,
     unit_registry: Res<UnitRegistry>,
-    units: Query<&Unit>,
+    mut units: Query<&mut Unit>,
     map_layout: Res<MapLayout>,
     mut map_state: ResMut<MapState>,
 ) {
@@ -183,9 +183,9 @@ fn update_tile_selection(
                     map_state.tile_tints.clear();
                 }
 
-                let unit = units.get(unit).unwrap();
+                let mut unit = units.get_mut(unit).unwrap();
                 let path = to_path(paths, (unit.x as i32, unit.y as i32), (tile.x, tile.y));
-                println!("got path: {:?}", path);
+                unit.move_path(path);
 
                 map_state.unit_move = None;
                 map_state.tile_tints.clear();
@@ -312,13 +312,16 @@ fn to_path(
     paths: HashMap<(i32, i32), (i32, i32)>,
     from: (i32, i32),
     to: (i32, i32),
-) -> Vec<(i32, i32)> {
-    let mut path_reversed = vec![];
+) -> Option<Vec<(i32, i32)>> {
+    let mut path_reversed = vec![to];
     let mut current = to;
     while current != from {
+        current = match paths.get(&current) {
+            Some(waypoint) => *waypoint,
+            None => return None,
+        };
         path_reversed.push(current);
-        current = *paths.get(&current).unwrap();
     }
     path_reversed.reverse();
-    path_reversed
+    Some(path_reversed)
 }

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use crate::{assets::types::TiledMap, game_config::GameAssets, AppState};
+use crate::{assets::types::TiledMap, game::map::MapLayout, game_config::GameAssets, AppState};
 
 use super::{
     animation::{Animatable, Animation},
@@ -18,6 +18,9 @@ impl Plugin for UnitPlugin {
         app.add_systems((
             create_units.in_schedule(OnEnter(AppState::Game)),
             update_unit_transform.in_set(GameSystemSets::Logic),
+            move_units
+                .in_set(GameSystemSets::Logic)
+                .before(update_unit_transform),
         ));
     }
 }
@@ -33,9 +36,16 @@ pub struct Unit {
     pub y: f32,
     pub z: f32,
     pub travel_distance: u32,
+
+    // waypoint index, waypoint progress, waypoints
+    pub path: Option<(u32, f32, Vec<(i32, i32)>)>,
 }
 
-impl Unit {}
+impl Unit {
+    pub fn move_path(&mut self, path: Vec<(i32, i32)>) {
+        self.path = Some((0, 0., path));
+    }
+}
 
 fn create_units(
     mut commands: Commands,
@@ -49,6 +59,7 @@ fn create_units(
         .spawn((
             SpriteBundle {
                 texture: game_assets.units.get("ogre").unwrap().clone(),
+                transform: Transform::from_scale(Vec3::new(0.5, 0.5, 1.)),
                 ..default()
             },
             Unit {
@@ -56,6 +67,7 @@ fn create_units(
                 x: 1.,
                 y: 1.,
                 z: 1.,
+                path: None,
             },
             Animatable::from_anim(ogre_walk, true),
         ))
@@ -74,4 +86,23 @@ fn update_unit_transform(
     for (mut transform, unit) in units.iter_mut() {
         transform.translation = iso_transform(unit.x, unit.y, unit.z, tile_w, tile_h, true);
     }
+}
+
+fn move_units(mut units: Query<&mut Unit>, time: Res<Time>, map_layout: Res<MapLayout>) {
+    // for mut unit in units.iter_mut() {
+    //     let mut x = unit.x;
+    //     let mut y = unit.y;
+    //     if let Some((current_waypoint, mut progress, path)) = &unit.path {
+    //         let distance = 1. / time.delta().as_millis() as f32;
+    //         progress += distance;
+    //
+    //         x = (1. - progress) * path[*current_waypoint as usize].0 as f32
+    //             + progress * path[*current_waypoint as usize + 1].0 as f32;
+    //         y = (1. - progress) * path[*current_waypoint as usize].1 as f32
+    //             + progress * path[*current_waypoint as usize + 1].1 as f32;
+    //     }
+    //
+    //     unit.x = x;
+    //     unit.y = y;
+    // }
 }

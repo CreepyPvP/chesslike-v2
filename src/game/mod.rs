@@ -6,7 +6,7 @@ use self::{animation::AnimatorPlugin, map::MapPlugin, picking::PickingPlugin, un
 
 mod animation;
 mod isometric;
-mod map;
+pub mod map;
 pub mod picking;
 mod unit;
 
