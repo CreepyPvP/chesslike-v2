@@ -156,7 +156,9 @@ fn update_tile_selection(
                 let paths = find_unit_paths(2, (tile.x, tile.y), &map_layout);
                 for reachable_tile in paths.keys() {
                     let (x, y) = *reachable_tile;
-                    map_state.tile_tints.insert((x, y), Color::rgb(0.6, 1.0, 0.6));
+                    map_state
+                        .tile_tints
+                        .insert((x, y), Color::rgb(0.6, 1.0, 0.6));
                 }
             }
             return;
@@ -170,7 +172,6 @@ fn update_tint(
     map_state: Res<MapState>,
 ) {
     for (mut sprite, tile, entity) in tiles.iter_mut() {
-
         let mut color = map_state
             .tile_tints
             .get(&(tile.x, tile.y))
@@ -179,7 +180,7 @@ fn update_tint(
 
         if let Some(selected) = pick_state.selected {
             if selected == entity {
-               color = Color::rgb(1.2 * color.r(), 1.2 * color.g(), 1.2 * color.b());
+                color = Color::rgb(1.2 * color.r(), 1.2 * color.g(), 1.2 * color.b());
             }
         }
 
@@ -203,46 +204,76 @@ fn correct_editor_transform(editor_x: u32, editor_y: u32, layer_id: u32) -> (i32
     )
 }
 
-pub fn find_unit_paths(distance: u32, location: (i32, i32), map_layout: &Res<MapLayout>) -> HashMap<(i32, i32), (i32, i32)> {
+pub fn find_unit_paths(
+    distance: u32,
+    location: (i32, i32),
+    map_layout: &Res<MapLayout>,
+) -> HashMap<(i32, i32), (i32, i32)> {
     let mut paths = HashMap::new();
-    paths.insert(location.clone(), location.clone());
-    let mut prev = vec!(location);
-    for _ in 0..distance {
-        let mut next_prev: Vec<(i32, i32)> = vec!();
-        for prev_tile in &prev {
-            let (x, y) = *prev_tile;
+    // distance => list<(from_tile, to_tile)>
+    let mut check_queue = HashMap::from([(0, vec![(location, location)])]);
+    for i in 1..=distance {
+        check_queue.insert(i, vec![]);
+    }
 
-            let dest = (x - 1, y);
-            if !paths.contains_key(&dest) && can_go_from_to(prev_tile, &dest, map_layout) {
-                paths.insert(dest, prev_tile.clone());
-                next_prev.push(dest);
+    for i in 0..=distance {
+        let queue = check_queue.remove(&i).unwrap();
+        for item in queue {
+            let (from, to) = item;
+            if paths.contains_key(&to) {
+                continue;
             }
+            paths.insert(to, from);
+            // Forget from here --------
+
+            let from = to;
+            let (x, y) = from;
 
             let dest = (x + 1, y);
-            if !paths.contains_key(&dest) && can_go_from_to(prev_tile, &dest, map_layout) {
-                paths.insert(dest, prev_tile.clone());
-                next_prev.push(dest);
+            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout) {
+                let key = i + cost;
+                if let Some(queue) = check_queue.get_mut(&key) {
+                    queue.push((from, dest));
+                }
             }
 
-            let dest = (x, y - 1);
-            if !paths.contains_key(&dest) && can_go_from_to(prev_tile, &dest, map_layout) {
-                paths.insert(dest, prev_tile.clone());
-                next_prev.push(dest);
+            let dest = (x - 1, y);
+            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout) {
+                let key = i + cost;
+                if let Some(queue) = check_queue.get_mut(&key) {
+                    queue.push((from, dest));
+                }
             }
 
             let dest = (x, y + 1);
-            if !paths.contains_key(&dest) && can_go_from_to(prev_tile, &dest, map_layout) {
-                paths.insert(dest, prev_tile.clone());
-                next_prev.push(dest);
+            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout) {
+                let key = i + cost;
+                if let Some(queue) = check_queue.get_mut(&key) {
+                    queue.push((from, dest));
+                }
+            }
+
+            let dest = (x, y - 1);
+            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout) {
+                let key = i + cost;
+                if let Some(queue) = check_queue.get_mut(&key) {
+                    queue.push((from, dest));
+                }
             }
         }
-
-        prev = next_prev;
     }
 
     paths
 }
 
-fn can_go_from_to(from: &(i32, i32), to: &(i32, i32), map_layout: &Res<MapLayout>) -> bool {
-    map_layout.tiles.get(from) == map_layout.tiles.get(to)
+fn distance_cost_from_to(
+    from: &(i32, i32),
+    to: &(i32, i32),
+    map_layout: &Res<MapLayout>,
+) -> Option<u32> {
+    if map_layout.tiles.get(from) == map_layout.tiles.get(to) {
+        Some(1)
+    } else {
+        Some(3)
+    }
 }
