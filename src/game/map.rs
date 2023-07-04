@@ -18,6 +18,7 @@ pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(MapState::default());
+        app.insert_resource(MapLayout::default());
 
         app.add_systems((
             create_map.in_schedule(OnEnter(AppState::Game)),
@@ -51,17 +52,17 @@ pub struct MapLayout {
 
 #[derive(Resource, Default)]
 pub struct MapState {
-    tile_tints: HashMap<Entity, Color>,
+    tile_tints: HashMap<(i32, i32), Color>,
 }
 
 pub fn create_map(
     mut commands: Commands,
     game_assets: Res<GameAssets>,
     tilemaps: Res<Assets<TiledMap>>,
+    mut map_layout: ResMut<MapLayout>,
 ) {
     let tilemap = tilemaps.get(&game_assets.map).unwrap();
     let (tile_w, tile_h) = (tilemap.tilewidth as f32, tilemap.tileheight as f32);
-    let mut map_layout = MapLayout::default();
 
     let pickable = Pickable {
         triangles: vec![
@@ -130,8 +131,6 @@ pub fn create_map(
     for tile in tiles {
         map.add_child(tile);
     }
-
-    commands.insert_resource(map_layout);
 }
 
 fn update_tile_selection(
@@ -139,6 +138,8 @@ fn update_tile_selection(
     pick_state: Res<PickState>,
     mouse: Res<Input<MouseButton>>,
     unit_registry: Res<UnitRegistry>,
+    map_layout: Res<MapLayout>,
+    mut map_state: ResMut<MapState>,
 ) {
     if !mouse.just_pressed(MouseButton::Left) {
         return;
@@ -149,9 +150,14 @@ fn update_tile_selection(
             if tile_entity != entity {
                 continue;
             }
+            map_state.tile_tints.clear();
             let unit = unit_registry.units.get(&(tile.x, tile.y));
             if unit.is_some() {
-                println!("clicked unit");
+                let paths = find_unit_paths(2, (tile.x, tile.y), &map_layout);
+                for reachable_tile in paths.keys() {
+                    let (x, y) = *reachable_tile;
+                    map_state.tile_tints.insert((x, y), Color::rgb(0.6, 1.0, 0.6));
+                }
             }
             return;
         }
@@ -160,14 +166,14 @@ fn update_tile_selection(
 
 fn update_tint(
     pick_state: Res<PickState>,
-    mut tiles: Query<(&mut Sprite, Entity), With<Tile>>,
+    mut tiles: Query<(&mut Sprite, &Tile, Entity)>,
     map_state: Res<MapState>,
 ) {
-    for (mut sprite, entity) in tiles.iter_mut() {
+    for (mut sprite, tile, entity) in tiles.iter_mut() {
 
         let mut color = map_state
             .tile_tints
-            .get(&entity)
+            .get(&(tile.x, tile.y))
             .map(|color| color.clone())
             .unwrap_or(Color::WHITE);
 
@@ -195,4 +201,48 @@ fn correct_editor_transform(editor_x: u32, editor_y: u32, layer_id: u32) -> (i32
         editor_x as i32 - 1 + layer_id as i32,
         editor_y as i32 - 1 + layer_id as i32,
     )
+}
+
+pub fn find_unit_paths(distance: u32, location: (i32, i32), map_layout: &Res<MapLayout>) -> HashMap<(i32, i32), (i32, i32)> {
+    let mut paths = HashMap::new();
+    paths.insert(location.clone(), location.clone());
+    let mut prev = vec!(location);
+    for _ in 0..distance {
+        let mut next_prev: Vec<(i32, i32)> = vec!();
+        for prev_tile in &prev {
+            let (x, y) = *prev_tile;
+
+            let dest = (x - 1, y);
+            if !paths.contains_key(&dest) && can_go_from_to(prev_tile, &dest, map_layout) {
+                paths.insert(dest, prev_tile.clone());
+                next_prev.push(dest);
+            }
+
+            let dest = (x + 1, y);
+            if !paths.contains_key(&dest) && can_go_from_to(prev_tile, &dest, map_layout) {
+                paths.insert(dest, prev_tile.clone());
+                next_prev.push(dest);
+            }
+
+            let dest = (x, y - 1);
+            if !paths.contains_key(&dest) && can_go_from_to(prev_tile, &dest, map_layout) {
+                paths.insert(dest, prev_tile.clone());
+                next_prev.push(dest);
+            }
+
+            let dest = (x, y + 1);
+            if !paths.contains_key(&dest) && can_go_from_to(prev_tile, &dest, map_layout) {
+                paths.insert(dest, prev_tile.clone());
+                next_prev.push(dest);
+            }
+        }
+
+        prev = next_prev;
+    }
+
+    paths
+}
+
+fn can_go_from_to(from: &(i32, i32), to: &(i32, i32), map_layout: &Res<MapLayout>) -> bool {
+    map_layout.tiles.get(from) == map_layout.tiles.get(to)
 }
