@@ -1,12 +1,8 @@
 use bevy::prelude::*;
 
-use self::{
-    animation::AnimatorPlugin, hoverable::HoverablePlugin, map::MapPlugin, picking::PickingPlugin,
-    unit::UnitPlugin,
-};
+use self::{animation::AnimatorPlugin, map::MapPlugin, picking::PickingPlugin, unit::UnitPlugin};
 
 mod animation;
-mod hoverable;
 mod isometric;
 mod map;
 pub mod picking;
@@ -27,7 +23,6 @@ impl Plugin for GamePlugin {
         app.configure_set(GameSystemSets::Logic.after(GameSystemSets::Input));
         app.configure_set(GameSystemSets::Render.after(GameSystemSets::Logic));
 
-        app.add_plugin(HoverablePlugin);
         app.add_plugin(AnimatorPlugin);
         app.add_plugin(MapPlugin);
         app.add_plugin(UnitPlugin);

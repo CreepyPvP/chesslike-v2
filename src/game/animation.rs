@@ -1,6 +1,10 @@
 use bevy::{
-    prelude::{Commands, Component, Entity, Handle, Image, IntoSystemConfig, Plugin, Query, Rect, Vec2, Res},
-    sprite::Sprite, time::{Timer, Time},
+    prelude::{
+        Commands, Component, Entity, Handle, Image, IntoSystemConfig, Plugin, Query, Rect, Res,
+        Vec2,
+    },
+    sprite::Sprite,
+    time::{Time, Timer},
 };
 
 use super::GameSystemSets;
@@ -19,14 +23,20 @@ impl Animation {
         extrusion_y: u32,
         frames: Vec<(u32, u32)>,
     ) -> Self {
-        let frames: Vec<Rect> = frames.iter().map(|frame| {
-            let top_left = Vec2::new((frame.0 * (frame_w + extrusion_x)) as f32, (frame.1 * (frame_h + extrusion_y)) as f32);
-            let bot_right = Vec2::new(top_left.x + frame_w as f32, top_left.y + frame_h as f32);
-            Rect { 
-                min: top_left,
-                max: bot_right,
-            }
-        }).collect();
+        let frames: Vec<Rect> = frames
+            .iter()
+            .map(|frame| {
+                let top_left = Vec2::new(
+                    (frame.0 * (frame_w + extrusion_x)) as f32,
+                    (frame.1 * (frame_h + extrusion_y)) as f32,
+                );
+                let bot_right = Vec2::new(top_left.x + frame_w as f32, top_left.y + frame_h as f32);
+                Rect {
+                    min: top_left,
+                    max: bot_right,
+                }
+            })
+            .collect();
 
         Animation {
             timer: Timer::from_seconds(frame_duration_seconds, bevy::time::TimerMode::Repeating),
@@ -65,7 +75,8 @@ fn update_animations(mut animatables: Query<(&mut Animatable, &mut Sprite)>, tim
         sprite.rect = Some(animatable.current.frames[animatable.current_frame]);
 
         if animatable.current.timer.tick(time.delta()).just_finished() {
-            animatable.current_frame = (animatable.current_frame + 1) % animatable.current.frames.len();
+            animatable.current_frame =
+                (animatable.current_frame + 1) % animatable.current.frames.len();
         }
     }
 }
