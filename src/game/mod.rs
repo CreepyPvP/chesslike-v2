@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::AppState;
+
 use self::{animation::AnimatorPlugin, map::MapPlugin, picking::PickingPlugin, unit::UnitPlugin};
 
 mod animation;
@@ -19,9 +21,17 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.configure_set(GameSystemSets::Input);
-        app.configure_set(GameSystemSets::Logic.after(GameSystemSets::Input));
-        app.configure_set(GameSystemSets::Render.after(GameSystemSets::Logic));
+        app.configure_set(GameSystemSets::Input.in_set(OnUpdate(AppState::Game)));
+        app.configure_set(
+            GameSystemSets::Logic
+                .after(GameSystemSets::Input)
+                .in_set(OnUpdate(AppState::Game)),
+        );
+        app.configure_set(
+            GameSystemSets::Render
+                .after(GameSystemSets::Logic)
+                .in_set(OnUpdate(AppState::Game)),
+        );
 
         app.add_plugin(AnimatorPlugin);
         app.add_plugin(MapPlugin);

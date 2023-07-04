@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bevy::{prelude::*, render::color::SrgbColorSpace};
+use bevy::{ecs::archetype::Archetypes, prelude::*, render::color::SrgbColorSpace};
 
 use crate::{
     assets::types::TiledMap, game_config::GameAssets, util::collisions::Triangle, AppState,
@@ -9,7 +9,7 @@ use crate::{
 use super::{
     isometric::iso_transform,
     picking::{PickState, Pickable},
-    unit::UnitRegistry,
+    unit::{Unit, UnitRegistry},
     GameSystemSets,
 };
 
@@ -53,6 +53,7 @@ pub struct MapLayout {
 #[derive(Resource, Default)]
 pub struct MapState {
     tile_tints: HashMap<(i32, i32), Color>,
+    unit_move: Option<(Entity, HashMap<(i32, i32), (i32, i32)>)>,
 }
 
 pub fn create_map(
@@ -107,9 +108,9 @@ pub fn create_map(
                     .spawn((
                         SpriteBundle {
                             texture: game_assets.tiles[id - 1].clone(),
-                            transform: iso_transform(
+                            transform: Transform::default().with_translation(iso_transform(
                                 x as f32, y as f32, layer_id_f, tile_w, tile_h, false,
-                            ),
+                            )),
                             ..default()
                         },
                         pickable.clone(),
@@ -138,9 +139,15 @@ fn update_tile_selection(
     pick_state: Res<PickState>,
     mouse: Res<Input<MouseButton>>,
     unit_registry: Res<UnitRegistry>,
+    units: Query<&Unit>,
     map_layout: Res<MapLayout>,
     mut map_state: ResMut<MapState>,
 ) {
+    if mouse.just_pressed(MouseButton::Right) {
+        map_state.unit_move = None;
+        map_state.tile_tints.clear();
+        return;
+    }
     if !mouse.just_pressed(MouseButton::Left) {
         return;
     }
@@ -150,18 +157,41 @@ fn update_tile_selection(
             if tile_entity != entity {
                 continue;
             }
-            map_state.tile_tints.clear();
+
             let unit = unit_registry.units.get(&(tile.x, tile.y));
             if unit.is_some() {
-                let paths = find_unit_paths(2, (tile.x, tile.y), &map_layout);
+                let unit = unit.unwrap();
+                let unit_comp = units.get(*unit).unwrap();
+                let paths =
+                    find_unit_paths(unit_comp.travel_distance, (tile.x, tile.y), &map_layout);
+                map_state.tile_tints.clear();
                 for reachable_tile in paths.keys() {
                     let (x, y) = *reachable_tile;
                     map_state
                         .tile_tints
                         .insert((x, y), Color::rgb(0.6, 1.0, 0.6));
                 }
+                map_state.unit_move = Some((*unit, paths));
+
+                return;
             }
-            return;
+
+            if map_state.unit_move.is_some() {
+                let (unit, paths) = std::mem::replace(&mut map_state.unit_move, None).unwrap();
+                if !paths.contains_key(&(tile.x, tile.y)) {
+                    map_state.unit_move = None;
+                    map_state.tile_tints.clear();
+                }
+
+                let unit = units.get(unit).unwrap();
+                let path = to_path(paths, (unit.x as i32, unit.y as i32), (tile.x, tile.y));
+                println!("got path: {:?}", path);
+
+                map_state.unit_move = None;
+                map_state.tile_tints.clear();
+
+                return;
+            }
         }
     }
 }
@@ -276,4 +306,19 @@ fn distance_cost_from_to(
     } else {
         Some(3)
     }
+}
+
+fn to_path(
+    paths: HashMap<(i32, i32), (i32, i32)>,
+    from: (i32, i32),
+    to: (i32, i32),
+) -> Vec<(i32, i32)> {
+    let mut path_reversed = vec![];
+    let mut current = to;
+    while current != from {
+        path_reversed.push(current);
+        current = *paths.get(&current).unwrap();
+    }
+    path_reversed.reverse();
+    path_reversed
 }
