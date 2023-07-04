@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, render::color::SrgbColorSpace};
 
 use crate::{
     assets::types::TiledMap, game_config::GameAssets, util::collisions::Triangle, AppState,
@@ -17,6 +17,8 @@ pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(MapState::default());
+
         app.add_systems((
             create_map.in_schedule(OnEnter(AppState::Game)),
             destroy_map.in_schedule(OnExit(AppState::Game)),
@@ -49,7 +51,7 @@ pub struct MapLayout {
 
 #[derive(Resource, Default)]
 pub struct MapState {
-    // pub tiles: HashMap<(i32, i32), u32>
+    tile_tints: HashMap<Entity, Color>,
 }
 
 pub fn create_map(
@@ -156,12 +158,22 @@ fn update_tile_selection(
     }
 }
 
-fn update_tint(pick_state: Res<PickState>, mut tiles: Query<(&mut Sprite, Entity), With<Tile>>) {
+fn update_tint(
+    pick_state: Res<PickState>,
+    mut tiles: Query<(&mut Sprite, Entity), With<Tile>>,
+    map_state: Res<MapState>,
+) {
     for (mut sprite, entity) in tiles.iter_mut() {
-        let mut color = Color::WHITE;
+
+        let mut color = map_state
+            .tile_tints
+            .get(&entity)
+            .map(|color| color.clone())
+            .unwrap_or(Color::WHITE);
+
         if let Some(selected) = pick_state.selected {
             if selected == entity {
-                color = Color::rgb(1.2, 1.2, 1.2);
+               color = Color::rgb(1.2 * color.r(), 1.2 * color.g(), 1.2 * color.b());
             }
         }
 
