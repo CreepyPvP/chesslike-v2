@@ -184,8 +184,10 @@ fn update_tile_selection(
                 }
 
                 let mut unit = units.get_mut(unit).unwrap();
-                let path = to_path(paths, (unit.x as i32, unit.y as i32), (tile.x, tile.y));
-                unit.move_path(path);
+                if let Some(path) = to_path(paths, (unit.x as i32, unit.y as i32), (tile.x, tile.y))
+                {
+                    unit.move_path(path);
+                }
 
                 map_state.unit_move = None;
                 map_state.tile_tints.clear();

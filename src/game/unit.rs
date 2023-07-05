@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::petgraph::algo::has_path_connecting};
 
 use crate::{assets::types::TiledMap, game::map::MapLayout, game_config::GameAssets, AppState};
 
@@ -63,7 +63,7 @@ fn create_units(
                 ..default()
             },
             Unit {
-                travel_distance: 2,
+                travel_distance: 3,
                 x: 1.,
                 y: 1.,
                 z: 1.,
@@ -88,21 +88,39 @@ fn update_unit_transform(
     }
 }
 
-fn move_units(mut units: Query<&mut Unit>, time: Res<Time>, map_layout: Res<MapLayout>) {
-    // for mut unit in units.iter_mut() {
-    //     let mut x = unit.x;
-    //     let mut y = unit.y;
-    //     if let Some((current_waypoint, mut progress, path)) = &unit.path {
-    //         let distance = 1. / time.delta().as_millis() as f32;
-    //         progress += distance;
-    //
-    //         x = (1. - progress) * path[*current_waypoint as usize].0 as f32
-    //             + progress * path[*current_waypoint as usize + 1].0 as f32;
-    //         y = (1. - progress) * path[*current_waypoint as usize].1 as f32
-    //             + progress * path[*current_waypoint as usize + 1].1 as f32;
-    //     }
-    //
-    //     unit.x = x;
-    //     unit.y = y;
-    // }
+fn move_units(
+    mut units: Query<(&mut Unit, Entity)>,
+    time: Res<Time>,
+    map_layout: Res<MapLayout>,
+    mut unit_registry: ResMut<UnitRegistry>,
+) {
+    for (mut unit, entity) in units.iter_mut() {
+        if unit.path.is_none() {
+            continue;
+        }
+        let path = std::mem::replace(&mut unit.path, None);
+        let (mut current_waypoint, mut progress, path) = path.unwrap();
+
+        progress += 0.5 / time.delta().as_millis() as f32;
+
+        if progress > 1.0 {
+            progress = 0.;
+            current_waypoint += 1;
+            if current_waypoint as usize == path.len() - 1 {
+                let last_waypoint = path.last().unwrap();
+                unit.x = last_waypoint.0 as f32;
+                unit.y = last_waypoint.1 as f32;
+                unit_registry.units.remove(&path[0]);
+                unit_registry.units.insert(*last_waypoint, entity);
+                continue;
+            }
+        }
+
+        unit.x = (1. - progress) * path[current_waypoint as usize].0 as f32
+            + progress * path[current_waypoint as usize + 1].0 as f32;
+        unit.y = (1. - progress) * path[current_waypoint as usize].1 as f32
+            + progress * path[current_waypoint as usize + 1].1 as f32;
+
+        unit.path = Some((current_waypoint, progress, path));
+    }
 }
