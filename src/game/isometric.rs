@@ -1,5 +1,6 @@
 use bevy::prelude::Vec3;
 
+// Warning! As soon as zb is dependant on tile width / height the unit move code breaks
 pub fn iso_transform(x: f32, y: f32, z: f32, w: f32, h: f32, is_unit: bool) -> Vec3 {
     let xb = (x * w - y * w) / 2.;
     let yb = (-x * h - y * h) / 2. + z * h;

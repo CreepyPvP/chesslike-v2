@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-use bevy::{prelude::*, utils::petgraph::algo::has_path_connecting};
+use bevy::prelude::*;
 
-use crate::{assets::types::TiledMap, game::map::MapLayout, game_config::GameAssets, AppState};
+use crate::{assets::types::TiledMap, game::map::MapLayout, game_config::GameAssets, AppState, math::max};
 
 use super::{
     animation::{Animatable, Animation},
-    isometric::iso_transform,
+    isometric::{iso_transform, self},
     GameSystemSets,
 };
 
@@ -39,6 +39,7 @@ pub struct Unit {
 
     // waypoint index, waypoint progress, waypoints
     pub path: Option<(u32, f32, Vec<(i32, i32)>)>,
+    render_priority: Option<f32>,
 }
 
 impl Unit {
@@ -68,6 +69,7 @@ fn create_units(
                 y: 1.,
                 z: 1.,
                 path: None,
+                render_priority: None,
             },
             Animatable::from_anim(ogre_walk, true),
         ))
@@ -85,6 +87,9 @@ fn update_unit_transform(
 
     for (mut transform, unit) in units.iter_mut() {
         transform.translation = iso_transform(unit.x, unit.y, unit.z, tile_w, tile_h, true);
+        if let Some(render_prio) = unit.render_priority {
+            transform.translation.z = render_prio;
+        }
     }
 }
 
@@ -101,17 +106,28 @@ fn move_units(
         let path = std::mem::replace(&mut unit.path, None);
         let (mut current_waypoint, mut progress, path) = path.unwrap();
 
-        progress += 0.5 / time.delta().as_millis() as f32;
+        if unit.render_priority.is_none() {
+            let waypoint_1 = path[current_waypoint as usize];
+            let prio_1 = iso_transform(waypoint_1.0 as f32, waypoint_1.1 as f32, map_layout.tiles[&(waypoint_1.0, waypoint_1.1)] as f32, 1., 1., true).z;
+            let waypoint_2 = path[current_waypoint as usize + 1];
+            let prio_2 = iso_transform(waypoint_2.0 as f32, waypoint_2.1 as f32, map_layout.tiles[&(waypoint_2.0, waypoint_2.1)] as f32, 1., 1., true).z;
+            let render_prio = max(prio_1, prio_2);
+            unit.render_priority = Some(render_prio);
+        }
+
+        progress += 0.2 / time.delta().as_millis() as f32;
 
         if progress > 1.0 {
             progress = 0.;
             current_waypoint += 1;
+            unit.render_priority = None;
             if current_waypoint as usize == path.len() - 1 {
                 let last_waypoint = path.last().unwrap();
                 unit.x = last_waypoint.0 as f32;
                 unit.y = last_waypoint.1 as f32;
                 unit_registry.units.remove(&path[0]);
                 unit_registry.units.insert(*last_waypoint, entity);
+                unit.render_priority = None;
                 continue;
             }
         }

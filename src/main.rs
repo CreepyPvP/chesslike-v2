@@ -5,6 +5,7 @@ use game_config::GameConfig;
 use loading::LoadingPlugin;
 use main_menu::MainMenuPlugin;
 
+mod math;
 mod assets;
 mod game;
 mod game_config;
