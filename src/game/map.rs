@@ -53,7 +53,9 @@ pub struct MapLayout {
 #[derive(Resource, Default)]
 pub struct MapState {
     tile_tints: HashMap<(i32, i32), Color>,
-    unit_move: Option<(Entity, HashMap<(i32, i32), (i32, i32)>)>,
+
+    unit_move_selection: Option<(Entity, HashMap<(i32, i32), (i32, i32)>)>,
+    pub unit_moving: bool
 }
 
 pub fn create_map(
@@ -144,11 +146,15 @@ fn update_tile_selection(
     mut map_state: ResMut<MapState>,
 ) {
     if mouse.just_pressed(MouseButton::Right) {
-        map_state.unit_move = None;
+        map_state.unit_move_selection = None;
         map_state.tile_tints.clear();
         return;
     }
     if !mouse.just_pressed(MouseButton::Left) {
+        return;
+    }
+
+    if map_state.unit_moving {
         return;
     }
 
@@ -163,7 +169,7 @@ fn update_tile_selection(
                 let unit = unit.unwrap();
                 let unit_comp = units.get(*unit).unwrap();
                 let paths =
-                    find_unit_paths(unit_comp.travel_distance, (tile.x, tile.y), &map_layout);
+                    find_unit_paths(unit_comp.travel_distance, (tile.x, tile.y), &map_layout, unit_comp);
                 map_state.tile_tints.clear();
                 for reachable_tile in paths.keys() {
                     let (x, y) = *reachable_tile;
@@ -171,16 +177,17 @@ fn update_tile_selection(
                         .tile_tints
                         .insert((x, y), Color::rgb(0.6, 1.0, 0.6));
                 }
-                map_state.unit_move = Some((*unit, paths));
+                map_state.unit_move_selection = Some((*unit, paths));
 
                 return;
             }
 
-            if map_state.unit_move.is_some() {
-                let (unit, paths) = std::mem::replace(&mut map_state.unit_move, None).unwrap();
+            if map_state.unit_move_selection.is_some() {
+                let (unit, paths) = std::mem::replace(&mut map_state.unit_move_selection, None).unwrap();
                 if !paths.contains_key(&(tile.x, tile.y)) {
-                    map_state.unit_move = None;
+                    map_state.unit_move_selection = None;
                     map_state.tile_tints.clear();
+                    return;
                 }
 
                 let mut unit = units.get_mut(unit).unwrap();
@@ -189,9 +196,9 @@ fn update_tile_selection(
                     unit.move_path(path);
                 }
 
-                map_state.unit_move = None;
+                map_state.unit_move_selection = None;
                 map_state.tile_tints.clear();
-
+                map_state.unit_moving = true;
                 return;
             }
         }
@@ -240,6 +247,8 @@ pub fn find_unit_paths(
     distance: u32,
     location: (i32, i32),
     map_layout: &Res<MapLayout>,
+
+    unit: &Unit,
 ) -> HashMap<(i32, i32), (i32, i32)> {
     let mut paths = HashMap::new();
     // distance => list<(from_tile, to_tile)>
@@ -262,7 +271,7 @@ pub fn find_unit_paths(
             let (x, y) = from;
 
             let dest = (x + 1, y);
-            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout) {
+            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout, unit) {
                 let key = i + cost;
                 if let Some(queue) = check_queue.get_mut(&key) {
                     queue.push((from, dest));
@@ -270,7 +279,7 @@ pub fn find_unit_paths(
             }
 
             let dest = (x - 1, y);
-            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout) {
+            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout, unit) {
                 let key = i + cost;
                 if let Some(queue) = check_queue.get_mut(&key) {
                     queue.push((from, dest));
@@ -278,7 +287,7 @@ pub fn find_unit_paths(
             }
 
             let dest = (x, y + 1);
-            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout) {
+            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout, unit) {
                 let key = i + cost;
                 if let Some(queue) = check_queue.get_mut(&key) {
                     queue.push((from, dest));
@@ -286,7 +295,7 @@ pub fn find_unit_paths(
             }
 
             let dest = (x, y - 1);
-            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout) {
+            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout, unit) {
                 let key = i + cost;
                 if let Some(queue) = check_queue.get_mut(&key) {
                     queue.push((from, dest));
@@ -302,11 +311,16 @@ fn distance_cost_from_to(
     from: &(i32, i32),
     to: &(i32, i32),
     map_layout: &Res<MapLayout>,
+    unit: &Unit
 ) -> Option<u32> {
     if map_layout.tiles.get(from) == map_layout.tiles.get(to) {
         Some(1)
     } else {
-        Some(3)
+        if unit.is_air {
+            Some(3)
+        } else {
+            None
+        }
     }
 }
 

@@ -7,7 +7,7 @@ use crate::{assets::types::TiledMap, game::map::MapLayout, game_config::GameAsse
 use super::{
     animation::{Animatable, Animation},
     isometric::{iso_transform, self},
-    GameSystemSets,
+    GameSystemSets, map::MapState,
 };
 
 pub struct UnitPlugin;
@@ -35,7 +35,10 @@ pub struct Unit {
     pub x: f32,
     pub y: f32,
     pub z: f32,
+
+    // movement
     pub travel_distance: u32,
+    pub is_air: bool,
 
     // waypoint index, waypoint progress, waypoints
     pub path: Option<(u32, f32, Vec<(i32, i32)>)>,
@@ -70,6 +73,7 @@ fn create_units(
                 z: 1.,
                 path: None,
                 render_priority: None,
+                is_air: false,
             },
             Animatable::from_anim(ogre_walk, true),
         ))
@@ -98,6 +102,7 @@ fn move_units(
     time: Res<Time>,
     map_layout: Res<MapLayout>,
     mut unit_registry: ResMut<UnitRegistry>,
+    mut map_state: ResMut<MapState>,
 ) {
     for (mut unit, entity) in units.iter_mut() {
         if unit.path.is_none() {
@@ -128,6 +133,7 @@ fn move_units(
                 unit_registry.units.remove(&path[0]);
                 unit_registry.units.insert(*last_waypoint, entity);
                 unit.render_priority = None;
+                map_state.unit_moving = false;
                 continue;
             }
         }
