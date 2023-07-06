@@ -39,7 +39,7 @@ pub struct Unit {
     pub y: f32,
     pub z: f32,
 
-    // movement
+    // movement stats
     pub travel_distance: u32,
     travel_speed: f32,
     pub is_air: bool,
@@ -51,14 +51,16 @@ pub struct Unit {
     move_down_right: Animation,
     move_down_left: Animation,
 
+    // movement state
     // waypoint index, waypoint progress, waypoints
-    pub path: Option<(u32, f32, Vec<(i32, i32)>)>,
+    path: Option<(u32, Vec<(i32, i32)>)>,
+    path_progress: Option<f32>,
     render_priority: Option<f32>,
 }
 
 impl Unit {
     pub fn move_path(&mut self, path: Vec<(i32, i32)>) {
-        self.path = Some((0, 0., path));
+        self.path = Some((0, path));
     }
 }
 
@@ -127,6 +129,7 @@ fn create_units(
                 y: 1.,
                 z: 1.,
                 path: None,
+                path_progress: None,
                 render_priority: None,
                 is_air: false,
                 travel_speed: 0.5,
@@ -153,6 +156,7 @@ fn create_units(
                 y: 2.,
                 z: 0.,
                 path: None,
+                path_progress: None,
                 render_priority: None,
                 is_air: false,
                 travel_speed: 0.25,
@@ -196,24 +200,36 @@ fn move_units(
             continue;
         }
         let path = std::mem::replace(&mut unit.path, None);
-        let (mut current_waypoint, mut progress, path) = path.unwrap();
+        let (mut current_waypoint, path) = path.unwrap();
+
+        let waypoint_current = path[current_waypoint as usize];
+        let waypoint_next = path[current_waypoint as usize + 1];
+
+        let mut progress = match unit.path_progress {
+            Some(progress) => progress,
+            None => {
+                // unit is starting path here
+
+                let dir = IsometricDirection::from_vec((waypoint_next.0 - waypoint_current.0, waypoint_next.1 - waypoint_current.1)).unwrap();
+                // animatable.play(unit.move_down_right
+                0.
+            },
+        };
 
         if unit.render_priority.is_none() {
-            let waypoint_1 = path[current_waypoint as usize];
             let prio_1 = iso_transform(
-                waypoint_1.0 as f32,
-                waypoint_1.1 as f32,
-                map_layout.tiles[&(waypoint_1.0, waypoint_1.1)] as f32,
+                waypoint_current.0 as f32,
+                waypoint_current.1 as f32,
+                map_layout.tiles[&(waypoint_current.0, waypoint_current.1)] as f32,
                 1.,
                 1.,
                 true,
             )
             .z;
-            let waypoint_2 = path[current_waypoint as usize + 1];
             let prio_2 = iso_transform(
-                waypoint_2.0 as f32,
-                waypoint_2.1 as f32,
-                map_layout.tiles[&(waypoint_2.0, waypoint_2.1)] as f32,
+                waypoint_next.0 as f32,
+                waypoint_next.1 as f32,
+                map_layout.tiles[&(waypoint_next.0, waypoint_next.1)] as f32,
                 1.,
                 1.,
                 true,
@@ -221,40 +237,37 @@ fn move_units(
             .z;
             let render_prio = max(prio_1, prio_2);
             unit.render_priority = Some(render_prio);
-
-            let dir = IsometricDirection::from_vec((waypoint_2.0 - waypoint_1.0, waypoint_2.1 - waypoint_1.1)).unwrap();
-            match dir {
-                IsometricDirection::UpRight => ,
-                IsometricDirection::UpLeft => ,
-                IsometricDirection::DownRight => ,
-                IsometricDirection::DownLeft => ,
-            }
-            // animatable.play(unit.move_down_right
         }
 
+        // update progress
         progress += unit.travel_speed * time.delta().as_millis() as f32 / 1000.;
 
+        // unit has reached a waypoint
         if progress > 1.0 {
-            progress = 0.;
             current_waypoint += 1;
             unit.render_priority = None;
+            unit.path_progress = None;
+            // without this line unit gets set to next waypoint for 1 frame
+            progress = 0.;
             if current_waypoint as usize == path.len() - 1 {
                 let last_waypoint = path.last().unwrap();
                 unit.x = last_waypoint.0 as f32;
                 unit.y = last_waypoint.1 as f32;
                 unit_registry.units.remove(&path[0]);
                 unit_registry.units.insert(*last_waypoint, entity);
-                unit.render_priority = None;
                 map_state.unit_moving = false;
                 continue;
             }
+        } else {
+            unit.path_progress = Some(progress);
         }
 
+        // update position
         unit.x = (1. - progress) * path[current_waypoint as usize].0 as f32
             + progress * path[current_waypoint as usize + 1].0 as f32;
         unit.y = (1. - progress) * path[current_waypoint as usize].1 as f32
             + progress * path[current_waypoint as usize + 1].1 as f32;
 
-        unit.path = Some((current_waypoint, progress, path));
+        unit.path = Some((current_waypoint, path));
     }
 }
