@@ -1,5 +1,5 @@
 use assets::AssetsPlugin;
-use bevy::prelude::*;
+use bevy::{prelude::*, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
 use game::{picking::PickCamera, GamePlugin};
 use game_config::GameConfig;
 use loading::LoadingPlugin;
@@ -33,6 +33,10 @@ fn main() {
         .add_plugin(LoadingPlugin)
         .add_plugin(GamePlugin)
         .add_plugin(MainMenuPlugin)
+        // debugging
+        .add_plugin(LogDiagnosticsPlugin::default())
+        .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        // end debugging
         .add_startup_system(spawn_camera)
         .run()
 }
