@@ -12,3 +12,22 @@ pub fn iso_transform(x: f32, y: f32, z: f32, w: f32, h: f32, is_unit: bool) -> V
 
     Vec3::new(xb, yb, zb)
 }
+
+pub enum IsometricDirection {
+    UpRight,
+    UpLeft,
+    DownRight,
+    DownLeft,
+}
+
+impl IsometricDirection {
+    pub fn from_vec(dir: (i32, i32)) -> Option<Self> {
+        match dir {
+            (0, -1) => Some(Self::UpRight),
+            (-1, 0) => Some(Self::UpLeft),
+            (1, 0) => Some(Self::DownRight),
+            (0, 1) => Some(Self::DownLeft),
+            _ => None,
+        }
+    }
+}

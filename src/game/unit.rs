@@ -8,7 +8,7 @@ use crate::{
 
 use super::{
     animation::{Animatable, Animation},
-    isometric::{self, iso_transform},
+    isometric::{self, iso_transform, IsometricDirection},
     map::MapState,
     GameSystemSets,
 };
@@ -41,6 +41,7 @@ pub struct Unit {
 
     // movement
     pub travel_distance: u32,
+    travel_speed: f32,
     pub is_air: bool,
 
     // animations
@@ -67,6 +68,15 @@ fn create_units(
     mut unit_registry: ResMut<UnitRegistry>,
 ) {
     // this is incredibly ugly...
+    let ogre_idle = Animation::new(
+        0.4,
+        192,
+        192,
+        64,
+        64,
+        vec![(0, 5)],
+        true,
+    );
     let ogre_walk_down_right = Animation::new(
         0.4,
         192,
@@ -119,13 +129,14 @@ fn create_units(
                 path: None,
                 render_priority: None,
                 is_air: false,
-                idle: ogre_walk_up_left.clone(),
+                travel_speed: 0.5,
+                idle: ogre_idle.clone(),
                 move_up_left: ogre_walk_up_left.clone(),
                 move_up_right: ogre_walk_up_right.clone(),
                 move_down_left: ogre_walk_down_left.clone(),
                 move_down_right: ogre_walk_down_right.clone(),
             },
-            Animatable::from_anim(ogre_walk_up_left.clone()),
+            Animatable::from_anim(ogre_idle.clone()),
         ))
         .id();
     unit_registry.units.insert((1, 1), ogre);
@@ -144,13 +155,14 @@ fn create_units(
                 path: None,
                 render_priority: None,
                 is_air: false,
-                idle: ogre_walk_up_left.clone(),
+                travel_speed: 0.25,
+                idle: ogre_idle.clone(),
                 move_up_left: ogre_walk_up_left.clone(),
                 move_up_right: ogre_walk_up_right.clone(),
                 move_down_left: ogre_walk_down_left.clone(),
                 move_down_right: ogre_walk_down_right.clone(),
             },
-            Animatable::from_anim(ogre_walk_up_left.clone()),
+            Animatable::from_anim(ogre_idle.clone()),
         ))
         .id();
     unit_registry.units.insert((2, 2), ogre);
@@ -173,13 +185,13 @@ fn update_unit_transform(
 }
 
 fn move_units(
-    mut units: Query<(&mut Unit, Entity)>,
+    mut units: Query<(&mut Unit, &mut Animatable, Entity)>,
     time: Res<Time>,
     map_layout: Res<MapLayout>,
     mut unit_registry: ResMut<UnitRegistry>,
     mut map_state: ResMut<MapState>,
 ) {
-    for (mut unit, entity) in units.iter_mut() {
+    for (mut unit, mut animatable, entity) in units.iter_mut() {
         if unit.path.is_none() {
             continue;
         }
@@ -209,9 +221,18 @@ fn move_units(
             .z;
             let render_prio = max(prio_1, prio_2);
             unit.render_priority = Some(render_prio);
+
+            let dir = IsometricDirection::from_vec((waypoint_2.0 - waypoint_1.0, waypoint_2.1 - waypoint_1.1)).unwrap();
+            match dir {
+                IsometricDirection::UpRight => ,
+                IsometricDirection::UpLeft => ,
+                IsometricDirection::DownRight => ,
+                IsometricDirection::DownLeft => ,
+            }
+            // animatable.play(unit.move_down_right
         }
 
-        progress += 0.2 / time.delta().as_millis() as f32;
+        progress += unit.travel_speed * time.delta().as_millis() as f32 / 1000.;
 
         if progress > 1.0 {
             progress = 0.;
