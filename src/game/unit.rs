@@ -211,7 +211,13 @@ fn move_units(
                 // unit is starting path here
 
                 let dir = IsometricDirection::from_vec((waypoint_next.0 - waypoint_current.0, waypoint_next.1 - waypoint_current.1)).unwrap();
-                // animatable.play(unit.move_down_right
+                let animation = match dir {
+                    IsometricDirection::UpRight => unit.move_up_right.clone(),
+                    IsometricDirection::UpLeft => unit.move_up_left.clone(),
+                    IsometricDirection::DownRight => unit.move_down_right.clone(),
+                    IsometricDirection::DownLeft => unit.move_down_left.clone(),
+                };
+                animatable.play(animation, true);
                 0.
             },
         };
@@ -256,6 +262,7 @@ fn move_units(
                 unit_registry.units.remove(&path[0]);
                 unit_registry.units.insert(*last_waypoint, entity);
                 map_state.unit_moving = false;
+                animatable.play(unit.idle.clone(), true);
                 continue;
             }
         } else {
