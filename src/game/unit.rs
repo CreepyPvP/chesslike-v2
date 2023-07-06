@@ -2,12 +2,15 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use crate::{assets::types::TiledMap, game::map::MapLayout, game_config::GameAssets, AppState, math::max};
+use crate::{
+    assets::types::TiledMap, game::map::MapLayout, game_config::GameAssets, math::max, AppState,
+};
 
 use super::{
     animation::{Animatable, Animation},
-    isometric::{iso_transform, self},
-    GameSystemSets, map::MapState,
+    isometric::{self, iso_transform},
+    map::MapState,
+    GameSystemSets,
 };
 
 pub struct UnitPlugin;
@@ -40,6 +43,13 @@ pub struct Unit {
     pub travel_distance: u32,
     pub is_air: bool,
 
+    // animations
+    idle: Animation,
+    move_up_right: Animation,
+    move_up_left: Animation,
+    move_down_right: Animation,
+    move_down_left: Animation,
+
     // waypoint index, waypoint progress, waypoints
     pub path: Option<(u32, f32, Vec<(i32, i32)>)>,
     render_priority: Option<f32>,
@@ -57,7 +67,42 @@ fn create_units(
     mut unit_registry: ResMut<UnitRegistry>,
 ) {
     // this is incredibly ugly...
-    let ogre_walk = Animation::new(0.4, 192, 192, 64, 64, vec![(0, 5), (1, 5), (2, 5), (3, 5)]);
+    let ogre_walk_down_right = Animation::new(
+        0.4,
+        192,
+        192,
+        64,
+        64,
+        vec![(0, 5), (1, 5), (2, 5), (3, 5)],
+        true,
+    );
+    let ogre_walk_down_left = Animation::new(
+        0.4,
+        192,
+        192,
+        64,
+        64,
+        vec![(0, 7), (1, 7), (2, 7), (3, 7)],
+        true,
+    );
+    let ogre_walk_up_left = Animation::new(
+        0.4,
+        192,
+        192,
+        64,
+        64,
+        vec![(0, 1), (1, 1), (2, 1), (3, 1)],
+        true,
+    );
+    let ogre_walk_up_right = Animation::new(
+        0.4,
+        192,
+        192,
+        64,
+        64,
+        vec![(0, 3), (1, 3), (2, 3), (3, 3)],
+        true,
+    );
 
     let ogre = commands
         .spawn((
@@ -74,11 +119,41 @@ fn create_units(
                 path: None,
                 render_priority: None,
                 is_air: false,
+                idle: ogre_walk_up_left.clone(),
+                move_up_left: ogre_walk_up_left.clone(),
+                move_up_right: ogre_walk_up_right.clone(),
+                move_down_left: ogre_walk_down_left.clone(),
+                move_down_right: ogre_walk_down_right.clone(),
             },
-            Animatable::from_anim(ogre_walk, true),
+            Animatable::from_anim(ogre_walk_up_left.clone()),
         ))
         .id();
     unit_registry.units.insert((1, 1), ogre);
+    let ogre = commands
+        .spawn((
+            SpriteBundle {
+                texture: game_assets.units.get("ogre").unwrap().clone(),
+                transform: Transform::from_scale(Vec3::new(0.5, 0.5, 1.)),
+                ..default()
+            },
+            Unit {
+                travel_distance: 3,
+                x: 2.,
+                y: 2.,
+                z: 0.,
+                path: None,
+                render_priority: None,
+                is_air: false,
+                idle: ogre_walk_up_left.clone(),
+                move_up_left: ogre_walk_up_left.clone(),
+                move_up_right: ogre_walk_up_right.clone(),
+                move_down_left: ogre_walk_down_left.clone(),
+                move_down_right: ogre_walk_down_right.clone(),
+            },
+            Animatable::from_anim(ogre_walk_up_left.clone()),
+        ))
+        .id();
+    unit_registry.units.insert((2, 2), ogre);
 }
 
 fn update_unit_transform(
@@ -113,9 +188,25 @@ fn move_units(
 
         if unit.render_priority.is_none() {
             let waypoint_1 = path[current_waypoint as usize];
-            let prio_1 = iso_transform(waypoint_1.0 as f32, waypoint_1.1 as f32, map_layout.tiles[&(waypoint_1.0, waypoint_1.1)] as f32, 1., 1., true).z;
+            let prio_1 = iso_transform(
+                waypoint_1.0 as f32,
+                waypoint_1.1 as f32,
+                map_layout.tiles[&(waypoint_1.0, waypoint_1.1)] as f32,
+                1.,
+                1.,
+                true,
+            )
+            .z;
             let waypoint_2 = path[current_waypoint as usize + 1];
-            let prio_2 = iso_transform(waypoint_2.0 as f32, waypoint_2.1 as f32, map_layout.tiles[&(waypoint_2.0, waypoint_2.1)] as f32, 1., 1., true).z;
+            let prio_2 = iso_transform(
+                waypoint_2.0 as f32,
+                waypoint_2.1 as f32,
+                map_layout.tiles[&(waypoint_2.0, waypoint_2.1)] as f32,
+                1.,
+                1.,
+                true,
+            )
+            .z;
             let render_prio = max(prio_1, prio_2);
             unit.render_priority = Some(render_prio);
         }

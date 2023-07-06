@@ -1,15 +1,14 @@
 use bevy::{
-    prelude::{
-        Commands, Component, Entity, Handle, Image, IntoSystemConfig, Plugin, Query, Rect, Res,
-        Vec2,
-    },
+    prelude::{Component, IntoSystemConfig, Plugin, Query, Rect, Res, Vec2},
     sprite::Sprite,
     time::{Time, Timer},
 };
 
 use super::GameSystemSets;
 
+#[derive(Clone)]
 pub struct Animation {
+    repeating: bool,
     timer: Timer,
     frames: Vec<Rect>,
 }
@@ -22,6 +21,7 @@ impl Animation {
         extrusion_x: u32,
         extrusion_y: u32,
         frames: Vec<(u32, u32)>,
+        repeating: bool,
     ) -> Self {
         let frames: Vec<Rect> = frames
             .iter()
@@ -41,23 +41,45 @@ impl Animation {
         Animation {
             timer: Timer::from_seconds(frame_duration_seconds, bevy::time::TimerMode::Repeating),
             frames,
+            repeating,
         }
     }
 }
 
 #[derive(Component)]
 pub struct Animatable {
-    current: Animation,
-    repeat: bool,
+    current_animation: Animation,
+    next_animation: Option<Animation>,
     current_frame: usize,
+    active: bool,
 }
 
 impl Animatable {
-    pub fn from_anim(animation: Animation, repeat: bool) -> Self {
+    pub fn from_anim(animation: Animation) -> Self {
         Animatable {
-            current: animation,
-            repeat,
+            current_animation: animation,
             current_frame: 0,
+            active: true,
+            next_animation: None,
+        }
+    }
+
+    pub fn stop(&mut self, instant: bool) {
+        if instant {
+            self.active = false;
+        } else {
+            self.current_animation.repeating = false;
+        }
+    }
+
+    pub fn play(&mut self, anim: Animation, force: bool) {
+        if force {
+            self.current_animation = anim;
+            self.current_frame = 0;
+            self.active = true;
+        } else {
+            self.next_animation = Some(anim);
+            self.current_animation.repeating = false;
         }
     }
 }
@@ -72,11 +94,29 @@ impl Plugin for AnimatorPlugin {
 
 fn update_animations(mut animatables: Query<(&mut Animatable, &mut Sprite)>, time: Res<Time>) {
     for (mut animatable, mut sprite) in animatables.iter_mut() {
-        sprite.rect = Some(animatable.current.frames[animatable.current_frame]);
+        sprite.rect = Some(animatable.current_animation.frames[animatable.current_frame]);
 
-        if animatable.current.timer.tick(time.delta()).just_finished() {
-            animatable.current_frame =
-                (animatable.current_frame + 1) % animatable.current.frames.len();
+        if !animatable.active {
+            return;
+        }
+
+        if animatable
+            .current_animation
+            .timer
+            .tick(time.delta())
+            .just_finished()
+        {
+            if animatable.current_frame >= animatable.current_animation.frames.len() - 1 {
+                if animatable.current_animation.repeating {
+                    animatable.current_frame = 0;
+                }
+                if let Some(next) = std::mem::replace(&mut animatable.next_animation, None) {
+                    animatable.current_animation = next;
+                    animatable.current_frame = 0;
+                }
+            } else {
+                animatable.current_frame = animatable.current_frame + 1;
+            }
         }
     }
 }

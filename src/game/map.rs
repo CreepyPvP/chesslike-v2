@@ -55,7 +55,7 @@ pub struct MapState {
     tile_tints: HashMap<(i32, i32), Color>,
 
     unit_move_selection: Option<(Entity, HashMap<(i32, i32), (i32, i32)>)>,
-    pub unit_moving: bool
+    pub unit_moving: bool,
 }
 
 pub fn create_map(
@@ -168,8 +168,12 @@ fn update_tile_selection(
             if unit.is_some() {
                 let unit = unit.unwrap();
                 let unit_comp = units.get(*unit).unwrap();
-                let paths =
-                    find_unit_paths(unit_comp.travel_distance, (tile.x, tile.y), &map_layout, unit_comp);
+                let paths = find_unit_paths(
+                    unit_comp.travel_distance,
+                    (tile.x, tile.y),
+                    &map_layout,
+                    unit_comp,
+                );
                 map_state.tile_tints.clear();
                 for reachable_tile in paths.keys() {
                     let (x, y) = *reachable_tile;
@@ -183,7 +187,8 @@ fn update_tile_selection(
             }
 
             if map_state.unit_move_selection.is_some() {
-                let (unit, paths) = std::mem::replace(&mut map_state.unit_move_selection, None).unwrap();
+                let (unit, paths) =
+                    std::mem::replace(&mut map_state.unit_move_selection, None).unwrap();
                 if !paths.contains_key(&(tile.x, tile.y)) {
                     map_state.unit_move_selection = None;
                     map_state.tile_tints.clear();
@@ -311,7 +316,7 @@ fn distance_cost_from_to(
     from: &(i32, i32),
     to: &(i32, i32),
     map_layout: &Res<MapLayout>,
-    unit: &Unit
+    unit: &Unit,
 ) -> Option<u32> {
     if map_layout.tiles.get(from) == map_layout.tiles.get(to) {
         Some(1)

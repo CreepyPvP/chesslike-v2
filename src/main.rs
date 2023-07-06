@@ -5,12 +5,12 @@ use game_config::GameConfig;
 use loading::LoadingPlugin;
 use main_menu::MainMenuPlugin;
 
-mod math;
 mod assets;
 mod game;
 mod game_config;
 mod loading;
 mod main_menu;
+mod math;
 mod util;
 
 #[derive(Debug, Default, Clone, Eq, States, PartialEq, Hash)]
