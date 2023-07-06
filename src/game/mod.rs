@@ -2,10 +2,11 @@ use bevy::prelude::*;
 
 use crate::AppState;
 
-use self::{animation::AnimatorPlugin, map::MapPlugin, picking::PickingPlugin, unit::UnitPlugin};
+use self::{animation::AnimatorPlugin, map::MapPlugin, picking::PickingPlugin, unit::UnitPlugin, game_state::GameStatePlugin};
 
 mod animation;
 mod isometric;
+pub mod game_state;
 pub mod map;
 pub mod picking;
 mod unit;
@@ -35,6 +36,7 @@ impl Plugin for GamePlugin {
 
         app.add_plugin(AnimatorPlugin);
         app.add_plugin(MapPlugin);
+        app.add_plugin(GameStatePlugin);
         app.add_plugin(UnitPlugin);
         app.add_plugin(PickingPlugin);
     }

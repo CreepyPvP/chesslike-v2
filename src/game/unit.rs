@@ -8,7 +8,7 @@ use crate::{
 
 use super::{
     animation::{Animatable, Animation},
-    isometric::{self, iso_transform, IsometricDirection},
+    isometric::{iso_transform, IsometricDirection},
     map::MapState,
     GameSystemSets,
 };

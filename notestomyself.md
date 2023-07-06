@@ -21,6 +21,6 @@ This document contains notes, meant for myself, on how to approach the rewrite o
 - (l)ist, to print the current line
 - (k)ill and (r)un, to start / exit program
 - (b)reak, to set a breakpoint at e. g. "chessgame::game::map::create_map", also accepts a line (#)
-- (c)ontinue, to continue execution as normal
+- (c)ontinue, to continue execution as normalrestart
 - to use linenumbers or print correct source code compiler optimizaiton has to be disabled
 
