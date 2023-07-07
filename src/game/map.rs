@@ -7,9 +7,10 @@ use crate::{
 };
 
 use super::{
+    game_state::{GameState, GameStates, Participant},
     isometric::iso_transform,
     picking::{PickState, Pickable},
-    unit::{Unit, UnitRegistry},
+    unit::{Unit, UnitEvent, UnitRegistry},
     GameSystemSets,
 };
 
@@ -34,6 +35,9 @@ impl Plugin for MapPlugin {
                 .run_if(should_confirm_move)
                 .in_set(GameSystemSets::Logic)
                 .before(select_tile),
+            place_unit
+                .run_if(should_place_unit)
+                .in_set(GameSystemSets::Logic),
         ));
     }
 }
@@ -154,8 +158,14 @@ fn clear_tile_selection(mut map_state: ResMut<MapState>) {
     map_state.tile_tints.clear();
 }
 
-fn should_select_tile(mouse: Res<Input<MouseButton>>, map_state: Res<MapState>) -> bool {
-    mouse.just_pressed(MouseButton::Left) && !map_state.unit_moving
+fn should_select_tile(
+    mouse: Res<Input<MouseButton>>,
+    map_state: Res<MapState>,
+    game_state: Res<GameState>,
+) -> bool {
+    mouse.just_pressed(MouseButton::Left)
+        && !map_state.unit_moving
+        && !matches!(game_state.state, GameStates::Placing(_))
 }
 
 fn select_tile(
@@ -193,10 +203,22 @@ fn select_tile(
     map_state.unit_move_selection = Some((*unit, paths));
 }
 
-fn should_confirm_move(mouse: Res<Input<MouseButton>>, map_state: Res<MapState>) -> bool {
+fn should_confirm_move(
+    mouse: Res<Input<MouseButton>>,
+    map_state: Res<MapState>,
+    game_state: Res<GameState>,
+) -> bool {
     mouse.just_pressed(MouseButton::Left)
         && !map_state.unit_moving
         && map_state.unit_move_selection.is_some()
+        && match game_state.state {
+            super::game_state::GameStates::Turn {
+                player,
+                unit,
+                did_move,
+            } => game_state.participants[player] == Participant::Me,
+            super::game_state::GameStates::Placing(_) => false,
+        }
 }
 
 fn confirm_move(
@@ -225,6 +247,37 @@ fn confirm_move(
     }
 
     clear_tile_selection(map_state);
+}
+
+fn should_place_unit(mouse: Res<Input<MouseButton>>, game_state: Res<GameState>) -> bool {
+    mouse.just_pressed(MouseButton::Left)
+        && match game_state.state {
+            super::game_state::GameStates::Placing(player_id) => {
+                game_state.participants[player_id] == Participant::Me
+            }
+            super::game_state::GameStates::Turn {
+                player,
+                unit,
+                did_move,
+            } => false,
+        }
+}
+
+fn place_unit(
+    pick_state: Res<PickState>,
+    tiles: Query<&Tile>,
+    units: Res<UnitRegistry>,
+    mut unit_events: EventWriter<UnitEvent>,
+) {
+    let tile = match pick_state.selected.map(|tile| tiles.get(tile)) {
+        Some(Ok(tile)) => tile,
+        _ => return,
+    };
+    if units.units.contains_key(&(tile.x, tile.y)) {
+        return;
+    }
+
+    unit_events.send(UnitEvent::Spawn(tile.x, tile.y));
 }
 
 fn update_tint(

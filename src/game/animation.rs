@@ -1,5 +1,5 @@
 use bevy::{
-    prelude::{Component, IntoSystemConfig, Plugin, Query, Rect, Res, Vec2},
+    prelude::{apply_system_buffers, Component, IntoSystemConfig, Plugin, Query, Rect, Res, Vec2},
     sprite::Sprite,
     time::{Time, Timer},
 };
@@ -89,10 +89,11 @@ pub struct AnimatorPlugin;
 impl Plugin for AnimatorPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_system(update_animations.in_set(GameSystemSets::Render));
+        app.add_system(apply_system_buffers.before(update_animations));
     }
 }
 
-fn update_animations(mut animatables: Query<(&mut Animatable, &mut Sprite)>, time: Res<Time>) {
+pub fn update_animations(mut animatables: Query<(&mut Animatable, &mut Sprite)>, time: Res<Time>) {
     for (mut animatable, mut sprite) in animatables.iter_mut() {
         sprite.rect = Some(animatable.current_animation.frames[animatable.current_frame]);
 

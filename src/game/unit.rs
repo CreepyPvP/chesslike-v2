@@ -15,11 +15,17 @@ use super::{
 
 pub struct UnitPlugin;
 
+pub enum UnitEvent {
+    Spawn(i32, i32),
+}
+
 impl Plugin for UnitPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(UnitRegistry::default());
+        app.add_event::<UnitEvent>();
         app.add_systems((
-            create_units.in_schedule(OnEnter(AppState::Game)),
+            process_unit_event.in_set(GameSystemSets::Render),
+            apply_system_buffers.after(process_unit_event),
             update_unit_transform.in_set(GameSystemSets::Logic),
             move_units
                 .in_set(GameSystemSets::Logic)
@@ -64,104 +70,112 @@ impl Unit {
     }
 }
 
-fn create_units(
-    mut commands: Commands,
-    game_assets: Res<GameAssets>,
-    mut unit_registry: ResMut<UnitRegistry>,
-) {
-    // this is incredibly ugly...
-    let ogre_idle = Animation::new(0.4, 192, 192, 64, 64, vec![(0, 5)], true);
-    let ogre_walk_down_right = Animation::new(
-        0.4,
-        192,
-        192,
-        64,
-        64,
-        vec![(0, 5), (1, 5), (2, 5), (3, 5)],
-        true,
-    );
-    let ogre_walk_down_left = Animation::new(
-        0.4,
-        192,
-        192,
-        64,
-        64,
-        vec![(0, 7), (1, 7), (2, 7), (3, 7)],
-        true,
-    );
-    let ogre_walk_up_left = Animation::new(
-        0.4,
-        192,
-        192,
-        64,
-        64,
-        vec![(0, 1), (1, 1), (2, 1), (3, 1)],
-        true,
-    );
-    let ogre_walk_up_right = Animation::new(
-        0.4,
-        192,
-        192,
-        64,
-        64,
-        vec![(0, 3), (1, 3), (2, 3), (3, 3)],
-        true,
-    );
-
-    let ogre = commands
+fn generate_entity(
+    x: i32,
+    y: i32,
+    z: i32,
+    commands: &mut Commands,
+    texture: Handle<Image>,
+    idle: Animation,
+    move_up_left: Animation,
+    move_up_right: Animation,
+    move_down_left: Animation,
+    move_down_right: Animation,
+) -> Entity {
+    commands
         .spawn((
             SpriteBundle {
-                texture: game_assets.units.get("ogre").unwrap().clone(),
-                transform: Transform::from_scale(Vec3::new(0.5, 0.5, 1.)),
+                texture,
+                transform: Transform::from_scale(Vec3::new(0.5, 0.5, 0.5)),
                 ..default()
             },
             Unit {
                 travel_distance: 3,
-                x: 1.,
-                y: 1.,
-                z: 1.,
-                path: None,
-                path_progress: None,
-                render_priority: None,
-                is_air: false,
-                travel_speed: 0.5,
-                idle: ogre_idle.clone(),
-                move_up_left: ogre_walk_up_left.clone(),
-                move_up_right: ogre_walk_up_right.clone(),
-                move_down_left: ogre_walk_down_left.clone(),
-                move_down_right: ogre_walk_down_right.clone(),
-            },
-            Animatable::from_anim(ogre_idle.clone()),
-        ))
-        .id();
-    unit_registry.units.insert((1, 1), ogre);
-    let ogre = commands
-        .spawn((
-            SpriteBundle {
-                texture: game_assets.units.get("ogre").unwrap().clone(),
-                transform: Transform::from_scale(Vec3::new(0.5, 0.5, 1.)),
-                ..default()
-            },
-            Unit {
-                travel_distance: 3,
-                x: 2.,
-                y: 2.,
-                z: 0.,
+                x: x as f32,
+                y: y as f32,
+                z: z as f32,
                 path: None,
                 path_progress: None,
                 render_priority: None,
                 is_air: false,
                 travel_speed: 0.25,
-                idle: ogre_idle.clone(),
-                move_up_left: ogre_walk_up_left.clone(),
-                move_up_right: ogre_walk_up_right.clone(),
-                move_down_left: ogre_walk_down_left.clone(),
-                move_down_right: ogre_walk_down_right.clone(),
+                idle: idle.clone(),
+                move_up_left,
+                move_up_right,
+                move_down_left,
+                move_down_right,
             },
-            Animatable::from_anim(ogre_idle.clone()),
+            Animatable::from_anim(idle),
         ))
-        .id();
-    unit_registry.units.insert((2, 2), ogre);
+        .id()
+}
+
+fn process_unit_event(
+    mut entity_events: EventReader<UnitEvent>,
+    mut unit_registry: ResMut<UnitRegistry>,
+    map_layout: Res<MapLayout>,
+    game_assets: Res<GameAssets>,
+    mut commands: Commands,
+) {
+    for event in entity_events.iter() {
+        match event {
+            UnitEvent::Spawn(x, y) => {
+                let texture = game_assets.units.get("ogre").unwrap().clone();
+                let z = *map_layout.tiles.get(&(*x, *y)).unwrap() as i32;
+                let ogre_idle = Animation::new(0.4, 192, 192, 64, 64, vec![(0, 5)], true);
+                let ogre_walk_down_right = Animation::new(
+                    0.4,
+                    192,
+                    192,
+                    64,
+                    64,
+                    vec![(0, 5), (1, 5), (2, 5), (3, 5)],
+                    true,
+                );
+                let ogre_walk_down_left = Animation::new(
+                    0.4,
+                    192,
+                    192,
+                    64,
+                    64,
+                    vec![(0, 7), (1, 7), (2, 7), (3, 7)],
+                    true,
+                );
+                let ogre_walk_up_left = Animation::new(
+                    0.4,
+                    192,
+                    192,
+                    64,
+                    64,
+                    vec![(0, 1), (1, 1), (2, 1), (3, 1)],
+                    true,
+                );
+                let ogre_walk_up_right = Animation::new(
+                    0.4,
+                    192,
+                    192,
+                    64,
+                    64,
+                    vec![(0, 3), (1, 3), (2, 3), (3, 3)],
+                    true,
+                );
+                let entity = generate_entity(
+                    *x,
+                    *y,
+                    z,
+                    &mut commands,
+                    texture,
+                    ogre_idle,
+                    ogre_walk_up_left,
+                    ogre_walk_up_right,
+                    ogre_walk_down_left,
+                    ogre_walk_down_right,
+                );
+
+                unit_registry.units.insert((*x, *y), entity);
+            }
+        }
+    }
 }
 
 fn update_unit_transform(
