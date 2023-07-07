@@ -1,7 +1,6 @@
-use bevy::prelude::{Plugin, Resource, Entity};
+use bevy::prelude::{Entity, Plugin, Resource};
 
 pub struct GameStatePlugin;
-
 
 #[derive(PartialEq)]
 pub enum GameStates {
@@ -28,7 +27,7 @@ pub struct GameState {
 impl Plugin for GameStatePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.insert_resource(GameState {
-            participants: vec!(Participant::Me, Participant::Bot),
+            participants: vec![Participant::Me, Participant::Bot],
             state: GameStates::Placing(0),
         });
     }

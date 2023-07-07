@@ -2,11 +2,14 @@ use bevy::prelude::*;
 
 use crate::AppState;
 
-use self::{animation::AnimatorPlugin, map::MapPlugin, picking::PickingPlugin, unit::UnitPlugin, game_state::GameStatePlugin};
+use self::{
+    animation::AnimatorPlugin, game_state::GameStatePlugin, map::MapPlugin, picking::PickingPlugin,
+    unit::UnitPlugin,
+};
 
 mod animation;
-mod isometric;
 pub mod game_state;
+mod isometric;
 pub mod map;
 pub mod picking;
 mod unit;

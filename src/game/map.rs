@@ -10,7 +10,7 @@ use super::{
     isometric::iso_transform,
     picking::{PickState, Pickable},
     unit::{Unit, UnitRegistry},
-    GameSystemSets, game_state::{GameState, GameStates, Participant},
+    GameSystemSets,
 };
 
 pub struct MapPlugin;
@@ -23,8 +23,17 @@ impl Plugin for MapPlugin {
         app.add_systems((
             create_map.in_schedule(OnEnter(AppState::Game)),
             destroy_map.in_schedule(OnExit(AppState::Game)),
-            update_tile_selection.in_set(GameSystemSets::Logic),
             update_tint.in_set(GameSystemSets::Render),
+            clear_tile_selection
+                .run_if(should_clear_tile_selection)
+                .in_set(GameSystemSets::Logic),
+            select_tile
+                .run_if(should_select_tile)
+                .in_set(GameSystemSets::Logic),
+            confirm_move
+                .run_if(should_confirm_move)
+                .in_set(GameSystemSets::Logic)
+                .before(select_tile),
         ));
     }
 }
@@ -136,91 +145,86 @@ pub fn create_map(
     }
 }
 
-fn update_tile_selection(
-    tiles: Query<(&Tile, Entity)>,
+fn should_clear_tile_selection(mouse: Res<Input<MouseButton>>) -> bool {
+    mouse.just_pressed(MouseButton::Right)
+}
+
+fn clear_tile_selection(mut map_state: ResMut<MapState>) {
+    map_state.unit_move_selection = None;
+    map_state.tile_tints.clear();
+}
+
+fn should_select_tile(mouse: Res<Input<MouseButton>>, map_state: Res<MapState>) -> bool {
+    mouse.just_pressed(MouseButton::Left) && !map_state.unit_moving
+}
+
+fn select_tile(
+    tiles: Query<&Tile>,
     pick_state: Res<PickState>,
-    mouse: Res<Input<MouseButton>>,
     unit_registry: Res<UnitRegistry>,
-    mut units: Query<&mut Unit>,
+    units: Query<&Unit>,
     map_layout: Res<MapLayout>,
     mut map_state: ResMut<MapState>,
-    mut game_state: ResMut<GameState>,
 ) {
-    if mouse.just_pressed(MouseButton::Right) {
-        map_state.unit_move_selection = None;
-        map_state.tile_tints.clear();
+    let tile = match pick_state.selected.map(|tile| tiles.get(tile)) {
+        Some(Ok(tile)) => tile,
+        _ => return,
+    };
+
+    let unit = unit_registry.units.get(&(tile.x, tile.y));
+    let unit = match unit {
+        Some(unit) => unit,
+        None => return,
+    };
+    let unit_comp = units.get(*unit).unwrap();
+    let paths = find_unit_paths(
+        unit_comp.travel_distance,
+        (tile.x, tile.y),
+        &map_layout,
+        unit_comp,
+    );
+    map_state.tile_tints.clear();
+    for reachable_tile in paths.keys() {
+        let (x, y) = *reachable_tile;
+        map_state
+            .tile_tints
+            .insert((x, y), Color::rgb(0.6, 1.0, 0.6));
+    }
+    map_state.unit_move_selection = Some((*unit, paths));
+}
+
+fn should_confirm_move(mouse: Res<Input<MouseButton>>, map_state: Res<MapState>) -> bool {
+    mouse.just_pressed(MouseButton::Left)
+        && !map_state.unit_moving
+        && map_state.unit_move_selection.is_some()
+}
+
+fn confirm_move(
+    tiles: Query<&Tile>,
+    pick_state: Res<PickState>,
+    mut units: Query<&mut Unit>,
+    mut map_state: ResMut<MapState>,
+) {
+    let tile = match pick_state.selected.map(|tile| tiles.get(tile)) {
+        Some(Ok(tile)) => tile,
+        _ => return,
+    };
+
+    let (unit, paths) = std::mem::replace(&mut map_state.unit_move_selection, None).unwrap();
+    if !paths.contains_key(&(tile.x, tile.y)) {
+        clear_tile_selection(map_state);
         return;
     }
-    if !mouse.just_pressed(MouseButton::Left) {
-        return;
-    }
 
-    if map_state.unit_moving {
-        return;
-    }
-
-    if let Some(entity) = pick_state.selected {
-        for (tile, tile_entity) in &tiles {
-            if tile_entity != entity {
-                continue;
-            }
-
-            let unit = unit_registry.units.get(&(tile.x, tile.y));
-
-            let is_my_turn = game_state.participants[match game_state.state {
-                GameStates::Placing(id) => id,
-                GameStates::Turn { player, unit, did_move } => player,
-            }] == Participant::Me;
-            
-            match game_state.state {
-                _ if unit.is_some() => {
-                    let unit = unit.unwrap();
-                    let unit_comp = units.get(*unit).unwrap();
-                    let paths = find_unit_paths(
-                        unit_comp.travel_distance,
-                        (tile.x, tile.y),
-                        &map_layout,
-                        unit_comp,
-                        );
-                    map_state.tile_tints.clear();
-                    for reachable_tile in paths.keys() {
-                        let (x, y) = *reachable_tile;
-                        map_state
-                            .tile_tints
-                            .insert((x, y), Color::rgb(0.6, 1.0, 0.6));
-                    }
-                    map_state.unit_move_selection = Some((*unit, paths));
-
-                    return;
-                },
-                // Todo: Ensure correct unit
-                GameStates::Turn { player, unit, did_move } if is_my_turn && !did_move && map_state.unit_move_selection.is_some() => {
-                    let (unit, paths) =
-                        std::mem::replace(&mut map_state.unit_move_selection, None).unwrap();
-                    if !paths.contains_key(&(tile.x, tile.y)) {
-                        map_state.unit_move_selection = None;
-                        map_state.tile_tints.clear();
-                        return;
-                    }
-
-                    let mut unit = units.get_mut(unit).unwrap();
-                    if let Some(path) = to_path(paths, (unit.x as i32, unit.y as i32), (tile.x, tile.y))
-                    {
-                        unit.move_path(path);
-                    }
-
-                    map_state.unit_move_selection = None;
-                    map_state.tile_tints.clear();
-                    map_state.unit_moving = true;
-                    return;
-                }
-                GameStates::Placing(_) if is_my_turn => {
-
-                },
-                _ => (),
-            }
+    let mut unit = units.get_mut(unit).unwrap();
+    if let Some(path) = to_path(paths, (unit.x as i32, unit.y as i32), (tile.x, tile.y)) {
+        if path.len() > 1 {
+            unit.move_path(path);
+            map_state.unit_moving = true;
         }
     }
+
+    clear_tile_selection(map_state);
 }
 
 fn update_tint(

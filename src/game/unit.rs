@@ -70,15 +70,7 @@ fn create_units(
     mut unit_registry: ResMut<UnitRegistry>,
 ) {
     // this is incredibly ugly...
-    let ogre_idle = Animation::new(
-        0.4,
-        192,
-        192,
-        64,
-        64,
-        vec![(0, 5)],
-        true,
-    );
+    let ogre_idle = Animation::new(0.4, 192, 192, 64, 64, vec![(0, 5)], true);
     let ogre_walk_down_right = Animation::new(
         0.4,
         192,
@@ -210,7 +202,11 @@ fn move_units(
             None => {
                 // unit is starting path here
 
-                let dir = IsometricDirection::from_vec((waypoint_next.0 - waypoint_current.0, waypoint_next.1 - waypoint_current.1)).unwrap();
+                let dir = IsometricDirection::from_vec((
+                    waypoint_next.0 - waypoint_current.0,
+                    waypoint_next.1 - waypoint_current.1,
+                ))
+                .unwrap();
                 let animation = match dir {
                     IsometricDirection::UpRight => unit.move_up_right.clone(),
                     IsometricDirection::UpLeft => unit.move_up_left.clone(),
@@ -219,7 +215,7 @@ fn move_units(
                 };
                 animatable.play(animation, true);
                 0.
-            },
+            }
         };
 
         if unit.render_priority.is_none() {
