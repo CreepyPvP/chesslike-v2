@@ -8,9 +8,10 @@ use crate::{
 
 use super::{
     animation::{Animatable, Animation},
+    game_state::GameStateEvent,
     isometric::{iso_transform, IsometricDirection},
     map::MapState,
-    GameSystemSets, GameEvent,
+    GameEvent, GameSystemSets,
 };
 
 pub struct UnitPlugin;
@@ -111,6 +112,7 @@ fn generate_entity(
 
 fn process_unit_event(
     mut event_reader: EventReader<GameEvent>,
+    mut event_writer: EventWriter<GameStateEvent>,
     mut unit_registry: ResMut<UnitRegistry>,
     map_layout: Res<MapLayout>,
     game_assets: Res<GameAssets>,
@@ -119,64 +121,86 @@ fn process_unit_event(
     for event in event_reader.iter() {
         match event {
             GameEvent::SpawnUnit(x, y) => {
-                let texture = game_assets.units.get("ogre").unwrap().clone();
-                let z = *map_layout.tiles.get(&(*x, *y)).unwrap() as i32;
-                let ogre_idle = Animation::new(0.4, 192, 192, 64, 64, vec![(0, 5)], true);
-                let ogre_walk_down_right = Animation::new(
-                    0.4,
-                    192,
-                    192,
-                    64,
-                    64,
-                    vec![(0, 5), (1, 5), (2, 5), (3, 5)],
-                    true,
-                );
-                let ogre_walk_down_left = Animation::new(
-                    0.4,
-                    192,
-                    192,
-                    64,
-                    64,
-                    vec![(0, 7), (1, 7), (2, 7), (3, 7)],
-                    true,
-                );
-                let ogre_walk_up_left = Animation::new(
-                    0.4,
-                    192,
-                    192,
-                    64,
-                    64,
-                    vec![(0, 1), (1, 1), (2, 1), (3, 1)],
-                    true,
-                );
-                let ogre_walk_up_right = Animation::new(
-                    0.4,
-                    192,
-                    192,
-                    64,
-                    64,
-                    vec![(0, 3), (1, 3), (2, 3), (3, 3)],
-                    true,
-                );
-                let entity = generate_entity(
-                    *x,
-                    *y,
-                    z,
-                    &mut commands,
-                    texture,
-                    ogre_idle,
-                    ogre_walk_up_left,
-                    ogre_walk_up_right,
-                    ogre_walk_down_left,
-                    ogre_walk_down_right,
-                );
-
-                unit_registry.units.insert((*x, *y), entity);
-                // event_writer.send(GameEvent::SpawnedUnit(entity));
+                place_ogre(*x, *y, &game_assets, &map_layout, &mut commands, &mut unit_registry, &mut event_writer);
             }
-            _ => (),
+            GameEvent::PlaceAiUnit => {
+                let (mut x, mut y) = (-1, -1);
+                loop {
+                    x += 1;
+                    y += 1;
+                    if map_layout.tiles.contains_key(&(x, y)) && !unit_registry.units.contains_key(&(x, y)) {
+                        break;
+                    }
+                }
+                place_ogre(x, y, &game_assets, &map_layout, &mut commands, &mut unit_registry, &mut event_writer);
+            }
         }
     }
+}
+
+fn place_ogre(
+    x: i32,
+    y: i32,
+    game_assets: &Res<GameAssets>,
+    map_layout: &Res<MapLayout>,
+    commands: &mut Commands,
+    unit_registry: &mut ResMut<UnitRegistry>,
+    event_writer: &mut EventWriter<GameStateEvent>,
+) {
+    let texture = game_assets.units.get("ogre").unwrap().clone();
+    let z = *map_layout.tiles.get(&(x, y)).unwrap() as i32;
+    let ogre_idle = Animation::new(0.4, 192, 192, 64, 64, vec![(0, 5)], true);
+    let ogre_walk_down_right = Animation::new(
+        0.4,
+        192,
+        192,
+        64,
+        64,
+        vec![(0, 5), (1, 5), (2, 5), (3, 5)],
+        true,
+    );
+    let ogre_walk_down_left = Animation::new(
+        0.4,
+        192,
+        192,
+        64,
+        64,
+        vec![(0, 7), (1, 7), (2, 7), (3, 7)],
+        true,
+    );
+    let ogre_walk_up_left = Animation::new(
+        0.4,
+        192,
+        192,
+        64,
+        64,
+        vec![(0, 1), (1, 1), (2, 1), (3, 1)],
+        true,
+    );
+    let ogre_walk_up_right = Animation::new(
+        0.4,
+        192,
+        192,
+        64,
+        64,
+        vec![(0, 3), (1, 3), (2, 3), (3, 3)],
+        true,
+    );
+    let entity = generate_entity(
+        x,
+        y,
+        z,
+        commands,
+        texture,
+        ogre_idle,
+        ogre_walk_up_left,
+        ogre_walk_up_right,
+        ogre_walk_down_left,
+        ogre_walk_down_right,
+    );
+
+    unit_registry.units.insert((x, y), entity);
+    event_writer.send(GameStateEvent::SpawnedUnit(entity));
 }
 
 fn update_unit_transform(

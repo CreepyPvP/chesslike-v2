@@ -7,11 +7,11 @@ use crate::{
 };
 
 use super::{
-    game_state::{GameState, GameStates, Participant, self},
+    game_state::{self, GameState, GameStates, Participant},
     isometric::iso_transform,
     picking::{PickState, Pickable},
     unit::{Unit, UnitRegistry},
-    GameSystemSets, GameEvent,
+    GameEvent, GameSystemSets,
 };
 
 pub struct MapPlugin;
