@@ -165,7 +165,7 @@ fn should_select_tile(
 ) -> bool {
     mouse.just_pressed(MouseButton::Left)
         && !map_state.unit_moving
-        && !matches!(game_state.state, GameStates::Placing(_, _))
+        && matches!(game_state.state, GameStates::Turn{ player, unit: _, did_move: _ } if game_state.participants[player] == Participant::Me)
 }
 
 fn select_tile(
@@ -249,9 +249,9 @@ fn should_place_unit(mouse: Res<Input<MouseButton>>, game_state: Res<GameState>)
                 game_state.participants[player_id] == Participant::Me
             }
             super::game_state::GameStates::Turn {
-                player,
-                unit,
-                did_move,
+                player: _,
+                unit: _,
+                did_move: _,
             } => false,
         }
 }
@@ -261,7 +261,7 @@ fn place_unit(
     tiles: Query<&Tile>,
     units: Res<UnitRegistry>,
     mut unit_events: EventWriter<GameEvent>,
-    mut game_state: ResMut<GameState>,
+    game_state: Res<GameState>,
 ) {
     let tile = match pick_state.selected.map(|tile| tiles.get(tile)) {
         Some(Ok(tile)) => tile,
@@ -270,8 +270,11 @@ fn place_unit(
     if units.units.contains_key(&(tile.x, tile.y)) {
         return;
     }
+    let GameStates::Placing(player_id, _) = game_state.state else {
+        return;
+    };
 
-    unit_events.send(GameEvent::SpawnUnit(tile.x, tile.y));
+    unit_events.send(GameEvent::SpawnUnit(tile.x, tile.y, player_id));
 }
 
 fn update_tint(

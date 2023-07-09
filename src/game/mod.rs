@@ -23,8 +23,9 @@ enum GameSystemSets {
 }
 
 pub enum GameEvent {
-    SpawnUnit(i32, i32),
-    PlaceAiUnit,
+    // x, y, player
+    SpawnUnit(i32, i32, usize),
+    PlaceAiUnit(usize),
 }
 
 pub struct GamePlugin;

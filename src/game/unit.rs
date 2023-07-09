@@ -41,10 +41,13 @@ pub struct Unit {
     pub y: f32,
     pub z: f32,
 
+    owner: usize,
+
     // movement stats
     pub travel_distance: u32,
-    travel_speed: f32,
     pub is_air: bool,
+    pub turn_prio: i32,
+    travel_speed: f32,
 
     // animations
     idle: Animation,
@@ -70,6 +73,8 @@ fn generate_entity(
     x: i32,
     y: i32,
     z: i32,
+    owner: usize,
+    turn_prio: i32,
     commands: &mut Commands,
     texture: Handle<Image>,
     idle: Animation,
@@ -90,6 +95,8 @@ fn generate_entity(
                 ..default()
             },
             Unit {
+                owner,
+                turn_prio,
                 travel_distance: 3,
                 x: x as f32,
                 y: y as f32,
@@ -120,10 +127,10 @@ fn process_unit_event(
 ) {
     for event in event_reader.iter() {
         match event {
-            GameEvent::SpawnUnit(x, y) => {
-                place_ogre(*x, *y, &game_assets, &map_layout, &mut commands, &mut unit_registry, &mut event_writer);
+            GameEvent::SpawnUnit(x, y, participant) => {
+                place_ogre(*x, *y, *participant, 1, &game_assets, &map_layout, &mut commands, &mut unit_registry, &mut event_writer);
             }
-            GameEvent::PlaceAiUnit => {
+            GameEvent::PlaceAiUnit(participant) => {
                 let (mut x, mut y) = (-1, -1);
                 loop {
                     x += 1;
@@ -132,7 +139,7 @@ fn process_unit_event(
                         break;
                     }
                 }
-                place_ogre(x, y, &game_assets, &map_layout, &mut commands, &mut unit_registry, &mut event_writer);
+                place_ogre(x, y, *participant, 0, &game_assets, &map_layout, &mut commands, &mut unit_registry, &mut event_writer);
             }
         }
     }
@@ -141,6 +148,8 @@ fn process_unit_event(
 fn place_ogre(
     x: i32,
     y: i32,
+    owner: usize,
+    turn_prio: i32,
     game_assets: &Res<GameAssets>,
     map_layout: &Res<MapLayout>,
     commands: &mut Commands,
@@ -190,6 +199,8 @@ fn place_ogre(
         x,
         y,
         z,
+        owner,
+        turn_prio,
         commands,
         texture,
         ogre_idle,
