@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use bevy::{prelude::{Entity, EventReader, EventWriter, IntoSystemConfig, Plugin, ResMut, Resource}, ecs::entity};
+use bevy::{
+    ecs::entity,
+    prelude::{Entity, EventReader, EventWriter, IntoSystemConfig, Plugin, ResMut, Resource},
+};
 
 use super::{GameEvent, GameSystemSets};
 
@@ -45,7 +48,7 @@ impl GameState {
         if let Some(units) = self.units.get_mut(&player_id) {
             units.push(entity);
         } else {
-            self.units.insert(player_id, vec!(entity));
+            self.units.insert(player_id, vec![entity]);
         }
 
         player_id += 1;
@@ -69,10 +72,12 @@ impl GameState {
         let all_units: Vec<Vec<(usize, Entity)>> = (0..self.participants.len())
             .map(|participant| {
                 let units = self.units.get(&participant).cloned();
-                let units = units.map(|units| units.into_iter().map(|unit| (participant, unit)).collect());
+                let units =
+                    units.map(|units| units.into_iter().map(|unit| (participant, unit)).collect());
                 units
             })
-            .collect::<Option<_>>().unwrap_or(vec!());
+            .collect::<Option<_>>()
+            .unwrap_or(vec![]);
         let mut all_units: Vec<(usize, Entity)> = all_units.into_iter().flatten().collect();
         all_units.sort_unstable();
         self.turn_order = all_units.into_iter().map(|entity| Some(entity)).collect();
@@ -80,9 +85,12 @@ impl GameState {
         let Some(Some((participant, unit))) = self.turn_order.first() else {
             return;
         };
-        self.state = GameStates::Turn{ unit: *unit, did_move: false, player: *participant };
+        self.state = GameStates::Turn {
+            unit: *unit,
+            did_move: false,
+            player: *participant,
+        };
     }
-
 }
 
 impl Plugin for GameStatePlugin {

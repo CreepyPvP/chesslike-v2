@@ -174,26 +174,31 @@ fn select_tile(
     unit_registry: Res<UnitRegistry>,
     units: Query<&Unit>,
     map_layout: Res<MapLayout>,
+    game_state: Res<GameState>,
     mut map_state: ResMut<MapState>,
 ) {
-    let tile = match pick_state.selected.map(|tile| tiles.get(tile)) {
-        Some(Ok(tile)) => tile,
-        _ => return,
+    let Some(Ok(tile)) = pick_state.selected.map(|tile| tiles.get(tile)) else {
+        return;
     };
+    let GameStates::Turn { player: _, unit: turn_unit, did_move: _ } = game_state.state else {
+        return;
+    };
+    let Some(unit) = unit_registry.units.get(&(tile.x, tile.y)) else {
+        return;
+    };
+    map_state.tile_tints.clear();
+    if unit != &turn_unit {
+        return;
+    }
+    let unit_comp = units.get(turn_unit).unwrap();
 
-    let unit = unit_registry.units.get(&(tile.x, tile.y));
-    let unit = match unit {
-        Some(unit) => unit,
-        None => return,
-    };
-    let unit_comp = units.get(*unit).unwrap();
+
     let paths = find_unit_paths(
         unit_comp.travel_distance,
         (tile.x, tile.y),
         &map_layout,
         unit_comp,
     );
-    map_state.tile_tints.clear();
     for reachable_tile in paths.keys() {
         let (x, y) = *reachable_tile;
         map_state

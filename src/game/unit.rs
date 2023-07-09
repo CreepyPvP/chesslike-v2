@@ -41,7 +41,7 @@ pub struct Unit {
     pub y: f32,
     pub z: f32,
 
-    owner: usize,
+    pub owner: usize,
 
     // movement stats
     pub travel_distance: u32,
@@ -128,18 +128,40 @@ fn process_unit_event(
     for event in event_reader.iter() {
         match event {
             GameEvent::SpawnUnit(x, y, participant) => {
-                place_ogre(*x, *y, *participant, 1, &game_assets, &map_layout, &mut commands, &mut unit_registry, &mut event_writer);
+                place_ogre(
+                    *x,
+                    *y,
+                    *participant,
+                    1,
+                    &game_assets,
+                    &map_layout,
+                    &mut commands,
+                    &mut unit_registry,
+                    &mut event_writer,
+                );
             }
             GameEvent::PlaceAiUnit(participant) => {
                 let (mut x, mut y) = (-1, -1);
                 loop {
                     x += 1;
                     y += 1;
-                    if map_layout.tiles.contains_key(&(x, y)) && !unit_registry.units.contains_key(&(x, y)) {
+                    if map_layout.tiles.contains_key(&(x, y))
+                        && !unit_registry.units.contains_key(&(x, y))
+                    {
                         break;
                     }
                 }
-                place_ogre(x, y, *participant, 0, &game_assets, &map_layout, &mut commands, &mut unit_registry, &mut event_writer);
+                place_ogre(
+                    x,
+                    y,
+                    *participant,
+                    0,
+                    &game_assets,
+                    &map_layout,
+                    &mut commands,
+                    &mut unit_registry,
+                    &mut event_writer,
+                );
             }
         }
     }
