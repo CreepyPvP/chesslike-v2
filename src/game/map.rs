@@ -190,7 +190,7 @@ fn select_tile(
     let Some((participant, turn_unit)) = game_state.turn_order[turn] else {
         return;
     };
-    if game_state.participants[participant] != Participant::Me || turn_unit != *unit {
+    if turn_unit != *unit || game_state.participants[participant] != Participant::Me || did_move {
         return;
     }
     let unit_comp = units.get(turn_unit).unwrap();
@@ -199,6 +199,7 @@ fn select_tile(
         unit_comp.travel_distance,
         (tile.x, tile.y),
         &map_layout,
+        &unit_registry,
         unit_comp,
     );
     for reachable_tile in paths.keys() {
@@ -322,7 +323,7 @@ pub fn find_unit_paths(
     distance: u32,
     location: (i32, i32),
     map_layout: &Res<MapLayout>,
-
+    unit_registry: &Res<UnitRegistry>,
     unit: &Unit,
 ) -> HashMap<(i32, i32), (i32, i32)> {
     let mut paths = HashMap::new();
@@ -346,7 +347,8 @@ pub fn find_unit_paths(
             let (x, y) = from;
 
             let dest = (x + 1, y);
-            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout, unit) {
+            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout, unit_registry, unit)
+            {
                 let key = i + cost;
                 if let Some(queue) = check_queue.get_mut(&key) {
                     queue.push((from, dest));
@@ -354,7 +356,8 @@ pub fn find_unit_paths(
             }
 
             let dest = (x - 1, y);
-            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout, unit) {
+            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout, unit_registry, unit)
+            {
                 let key = i + cost;
                 if let Some(queue) = check_queue.get_mut(&key) {
                     queue.push((from, dest));
@@ -362,7 +365,8 @@ pub fn find_unit_paths(
             }
 
             let dest = (x, y + 1);
-            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout, unit) {
+            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout, unit_registry, unit)
+            {
                 let key = i + cost;
                 if let Some(queue) = check_queue.get_mut(&key) {
                     queue.push((from, dest));
@@ -370,7 +374,8 @@ pub fn find_unit_paths(
             }
 
             let dest = (x, y - 1);
-            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout, unit) {
+            if let Some(cost) = distance_cost_from_to(&from, &dest, map_layout, unit_registry, unit)
+            {
                 let key = i + cost;
                 if let Some(queue) = check_queue.get_mut(&key) {
                     queue.push((from, dest));
@@ -386,8 +391,13 @@ fn distance_cost_from_to(
     from: &(i32, i32),
     to: &(i32, i32),
     map_layout: &Res<MapLayout>,
+    unit_registry: &Res<UnitRegistry>,
     unit: &Unit,
 ) -> Option<u32> {
+    if unit_registry.units.contains_key(&to) {
+        return None;
+    }
+
     if map_layout.tiles.get(from) == map_layout.tiles.get(to) {
         Some(1)
     } else {
