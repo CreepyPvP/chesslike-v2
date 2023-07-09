@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use bevy::{
-    ecs::entity,
-    prelude::{Entity, EventReader, EventWriter, IntoSystemConfig, Plugin, ResMut, Resource},
-};
+use bevy::prelude::{Entity, EventReader, EventWriter, IntoSystemConfig, Plugin, ResMut, Resource};
 
 use super::{GameEvent, GameSystemSets};
 
@@ -11,17 +8,15 @@ pub struct GameStatePlugin;
 
 pub enum GameStateEvent {
     SpawnedUnit(Entity),
+    MovedUnit(Entity),
 }
 
 #[derive(PartialEq)]
 pub enum GameStates {
     // player id, round
     Placing(usize, u32),
-    Turn {
-        player: usize,
-        unit: Entity,
-        did_move: bool,
-    },
+    // turn, did move
+    Turn(usize, bool),
 }
 
 #[derive(PartialEq)]
@@ -34,8 +29,8 @@ pub enum Participant {
 pub struct GameState {
     pub state: GameStates,
     pub participants: Vec<Participant>,
+    pub turn_order: Vec<Option<(usize, Entity)>>,
     units: HashMap<usize, Vec<Entity>>,
-    turn_order: Vec<Option<(usize, Entity)>>,
     units_per_participant: u32,
 }
 
@@ -81,15 +76,21 @@ impl GameState {
         let mut all_units: Vec<(usize, Entity)> = all_units.into_iter().flatten().collect();
         all_units.sort_unstable();
         self.turn_order = all_units.into_iter().map(|entity| Some(entity)).collect();
+        self.state = GameStates::Turn(0, false);
+    }
 
-        let Some(Some((participant, unit))) = self.turn_order.first() else {
+    fn next_turn(&mut self) {
+        let GameStates::Turn(mut current_turn, _) = self.state else {
             return;
         };
-        self.state = GameStates::Turn {
-            unit: *unit,
-            did_move: false,
-            player: *participant,
-        };
+
+        loop {
+            current_turn = (current_turn + 1) % self.turn_order.len();
+            if self.turn_order[current_turn].is_some() {
+                break;
+            }
+        }
+        self.state = GameStates::Turn(current_turn, false);
     }
 }
 
@@ -118,6 +119,9 @@ fn update_game_state(
         match event {
             GameStateEvent::SpawnedUnit(entity) => {
                 game_state.place(entity.clone(), &mut event_writer)
+            }
+            GameStateEvent::MovedUnit(_) => {
+                game_state.next_turn();
             }
         }
     }

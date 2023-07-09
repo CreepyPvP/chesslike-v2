@@ -37,8 +37,8 @@ fn main() {
         .add_plugin(GamePlugin)
         .add_plugin(MainMenuPlugin)
         // debugging
-        // .add_plugin(LogDiagnosticsPlugin::default())
-        // .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        .add_plugin(LogDiagnosticsPlugin::default())
+        .add_plugin(FrameTimeDiagnosticsPlugin::default())
         // end debugging
         .add_startup_system(spawn_camera)
         .run()

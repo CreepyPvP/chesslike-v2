@@ -7,7 +7,7 @@ use crate::{
 };
 
 use super::{
-    game_state::{self, GameState, GameStates, Participant},
+    game_state::{GameState, GameStates, Participant},
     isometric::iso_transform,
     picking::{PickState, Pickable},
     unit::{Unit, UnitRegistry},
@@ -165,7 +165,7 @@ fn should_select_tile(
 ) -> bool {
     mouse.just_pressed(MouseButton::Left)
         && !map_state.unit_moving
-        && matches!(game_state.state, GameStates::Turn{ player, unit: _, did_move: _ } if game_state.participants[player] == Participant::Me)
+        && matches!(game_state.state, GameStates::Turn(_, _))
 }
 
 fn select_tile(
@@ -180,18 +180,20 @@ fn select_tile(
     let Some(Ok(tile)) = pick_state.selected.map(|tile| tiles.get(tile)) else {
         return;
     };
-    let GameStates::Turn { player: _, unit: turn_unit, did_move: _ } = game_state.state else {
+    let GameStates::Turn(turn, did_move) = game_state.state else {
         return;
     };
     let Some(unit) = unit_registry.units.get(&(tile.x, tile.y)) else {
         return;
     };
     map_state.tile_tints.clear();
-    if unit != &turn_unit {
+    let Some((participant, turn_unit)) = game_state.turn_order[turn] else {
+        return;
+    };
+    if game_state.participants[participant] != Participant::Me || turn_unit != *unit {
         return;
     }
     let unit_comp = units.get(turn_unit).unwrap();
-
 
     let paths = find_unit_paths(
         unit_comp.travel_distance,
@@ -216,7 +218,7 @@ fn should_confirm_move(
     mouse.just_pressed(MouseButton::Left)
         && !map_state.unit_moving
         && map_state.unit_move_selection.is_some()
-        && matches!(game_state.state, GameStates::Turn{ player, unit: _, did_move: _ } if game_state.participants[player] == Participant::Me)
+        && matches!(game_state.state, GameStates::Turn(_, _))
 }
 
 fn confirm_move(
@@ -248,17 +250,13 @@ fn confirm_move(
 }
 
 fn should_place_unit(mouse: Res<Input<MouseButton>>, game_state: Res<GameState>) -> bool {
-    mouse.just_pressed(MouseButton::Left)
-        && match game_state.state {
-            super::game_state::GameStates::Placing(player_id, _) => {
-                game_state.participants[player_id] == Participant::Me
-            }
-            super::game_state::GameStates::Turn {
-                player: _,
-                unit: _,
-                did_move: _,
-            } => false,
-        }
+    if !mouse.just_pressed(MouseButton::Left) {
+        return false;
+    }
+    let GameStates::Placing(player_id, _) = game_state.state else {
+        return false;
+    };
+    game_state.participants[player_id] == Participant::Me
 }
 
 fn place_unit(

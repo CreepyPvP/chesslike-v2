@@ -258,6 +258,7 @@ fn move_units(
     map_layout: Res<MapLayout>,
     mut unit_registry: ResMut<UnitRegistry>,
     mut map_state: ResMut<MapState>,
+    mut event_writer: EventWriter<GameStateEvent>,
 ) {
     for (mut unit, mut animatable, entity) in units.iter_mut() {
         if unit.path.is_none() {
@@ -331,6 +332,7 @@ fn move_units(
                 unit_registry.units.insert(*last_waypoint, entity);
                 map_state.unit_moving = false;
                 animatable.play(unit.idle.clone(), true);
+                event_writer.send(GameStateEvent::MovedUnit(entity));
                 continue;
             }
         } else {
