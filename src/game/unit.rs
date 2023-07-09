@@ -10,21 +10,16 @@ use super::{
     animation::{Animatable, Animation},
     isometric::{iso_transform, IsometricDirection},
     map::MapState,
-    GameSystemSets,
+    GameSystemSets, GameEvent,
 };
 
 pub struct UnitPlugin;
 
-pub enum UnitEvent {
-    Spawn(i32, i32),
-}
-
 impl Plugin for UnitPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(UnitRegistry::default());
-        app.add_event::<UnitEvent>();
         app.add_systems((
-            process_unit_event.in_set(GameSystemSets::Render),
+            process_unit_event.in_set(GameSystemSets::Update),
             apply_system_buffers.after(process_unit_event),
             update_unit_transform.in_set(GameSystemSets::Logic),
             move_units
@@ -86,6 +81,10 @@ fn generate_entity(
         .spawn((
             SpriteBundle {
                 texture,
+                sprite: Sprite {
+                    rect: Some(Rect::new(0., 0., 0., 0.)),
+                    ..Default::default()
+                },
                 transform: Transform::from_scale(Vec3::new(0.5, 0.5, 0.5)),
                 ..default()
             },
@@ -111,15 +110,15 @@ fn generate_entity(
 }
 
 fn process_unit_event(
-    mut entity_events: EventReader<UnitEvent>,
+    mut event_reader: EventReader<GameEvent>,
     mut unit_registry: ResMut<UnitRegistry>,
     map_layout: Res<MapLayout>,
     game_assets: Res<GameAssets>,
     mut commands: Commands,
 ) {
-    for event in entity_events.iter() {
+    for event in event_reader.iter() {
         match event {
-            UnitEvent::Spawn(x, y) => {
+            GameEvent::SpawnUnit(x, y) => {
                 let texture = game_assets.units.get("ogre").unwrap().clone();
                 let z = *map_layout.tiles.get(&(*x, *y)).unwrap() as i32;
                 let ogre_idle = Animation::new(0.4, 192, 192, 64, 64, vec![(0, 5)], true);
@@ -173,7 +172,9 @@ fn process_unit_event(
                 );
 
                 unit_registry.units.insert((*x, *y), entity);
+                // event_writer.send(GameEvent::SpawnedUnit(entity));
             }
+            _ => (),
         }
     }
 }

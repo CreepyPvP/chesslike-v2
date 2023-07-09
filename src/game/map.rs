@@ -7,11 +7,11 @@ use crate::{
 };
 
 use super::{
-    game_state::{GameState, GameStates, Participant},
+    game_state::{GameState, GameStates, Participant, self},
     isometric::iso_transform,
     picking::{PickState, Pickable},
-    unit::{Unit, UnitEvent, UnitRegistry},
-    GameSystemSets,
+    unit::{Unit, UnitRegistry},
+    GameSystemSets, GameEvent,
 };
 
 pub struct MapPlugin;
@@ -165,7 +165,7 @@ fn should_select_tile(
 ) -> bool {
     mouse.just_pressed(MouseButton::Left)
         && !map_state.unit_moving
-        && !matches!(game_state.state, GameStates::Placing(_))
+        && !matches!(game_state.state, GameStates::Placing(_, _))
 }
 
 fn select_tile(
@@ -211,14 +211,7 @@ fn should_confirm_move(
     mouse.just_pressed(MouseButton::Left)
         && !map_state.unit_moving
         && map_state.unit_move_selection.is_some()
-        && match game_state.state {
-            super::game_state::GameStates::Turn {
-                player,
-                unit,
-                did_move,
-            } => game_state.participants[player] == Participant::Me,
-            super::game_state::GameStates::Placing(_) => false,
-        }
+        && matches!(game_state.state, GameStates::Turn{ player, unit: _, did_move: _ } if game_state.participants[player] == Participant::Me)
 }
 
 fn confirm_move(
@@ -252,7 +245,7 @@ fn confirm_move(
 fn should_place_unit(mouse: Res<Input<MouseButton>>, game_state: Res<GameState>) -> bool {
     mouse.just_pressed(MouseButton::Left)
         && match game_state.state {
-            super::game_state::GameStates::Placing(player_id) => {
+            super::game_state::GameStates::Placing(player_id, _) => {
                 game_state.participants[player_id] == Participant::Me
             }
             super::game_state::GameStates::Turn {
@@ -267,7 +260,8 @@ fn place_unit(
     pick_state: Res<PickState>,
     tiles: Query<&Tile>,
     units: Res<UnitRegistry>,
-    mut unit_events: EventWriter<UnitEvent>,
+    mut unit_events: EventWriter<GameEvent>,
+    mut game_state: ResMut<GameState>,
 ) {
     let tile = match pick_state.selected.map(|tile| tiles.get(tile)) {
         Some(Ok(tile)) => tile,
@@ -277,7 +271,7 @@ fn place_unit(
         return;
     }
 
-    unit_events.send(UnitEvent::Spawn(tile.x, tile.y));
+    unit_events.send(GameEvent::SpawnUnit(tile.x, tile.y));
 }
 
 fn update_tint(

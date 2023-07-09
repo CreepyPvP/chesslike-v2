@@ -16,15 +16,22 @@ mod unit;
 
 #[derive(SystemSet, Debug, Clone, Copy, Eq, PartialEq, Hash)]
 enum GameSystemSets {
-    Logic,
-    Render,
     Input,
+    Logic,
+    Update,
+    Render,
+}
+
+pub enum GameEvent {
+    SpawnUnit(i32, i32),
+    SpawnedUnit(Entity),
 }
 
 pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
+        app.add_event::<GameEvent>();
         app.configure_set(GameSystemSets::Input.in_set(OnUpdate(AppState::Game)));
         app.configure_set(
             GameSystemSets::Logic
@@ -32,8 +39,13 @@ impl Plugin for GamePlugin {
                 .in_set(OnUpdate(AppState::Game)),
         );
         app.configure_set(
-            GameSystemSets::Render
+            GameSystemSets::Update
                 .after(GameSystemSets::Logic)
+                .in_set(OnUpdate(AppState::Game)),
+        );
+        app.configure_set(
+            GameSystemSets::Render
+                .after(GameSystemSets::Update)
                 .in_set(OnUpdate(AppState::Game)),
         );
 
